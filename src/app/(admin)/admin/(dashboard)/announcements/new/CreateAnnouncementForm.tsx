@@ -56,7 +56,7 @@ export default function CreateAnnouncementForm() {
             name="title"
             id="title"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2"
             placeholder="e.g., Change in Pension Distribution Date"
           />
         </div>
@@ -69,7 +69,7 @@ export default function CreateAnnouncementForm() {
             id="category"
             name="category"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white"
+            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2 bg-white"
           >
             <option value="General">General</option>
             <option value="Program">Program Update</option>
@@ -87,7 +87,7 @@ export default function CreateAnnouncementForm() {
             id="status"
             name="status"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white"
+            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2 bg-white"
           >
             <option value="Draft">Draft (Hidden)</option>
             <option value="Published">Published (Visible)</option>
@@ -103,7 +103,7 @@ export default function CreateAnnouncementForm() {
             name="content"
             rows={6}
             required
-            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+            className="mt-1 block w-full rounded-md border-gray-300 border shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2"
             placeholder="Write the full details of the announcement here..."
           />
         </div>
@@ -113,14 +113,14 @@ export default function CreateAnnouncementForm() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+          className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
         >
           {isSubmitting ? (
             <>

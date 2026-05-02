@@ -14,7 +14,7 @@ export default async function AnnouncementsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center">
-            <Megaphone className="mr-2 h-6 w-6 text-blue-600" />
+            <Megaphone className="mr-2 h-6 w-6 text-green-600" />
             Announcements
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -23,7 +23,7 @@ export default async function AnnouncementsPage() {
         </div>
         <Link
           href="/admin/announcements/new"
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white shadow hover:bg-blue-600/90 h-9 px-4 py-2"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white shadow hover:bg-green-600/90 h-9 px-4 py-2"
         >
           <Plus className="mr-2 h-4 w-4" />
           New Announcement

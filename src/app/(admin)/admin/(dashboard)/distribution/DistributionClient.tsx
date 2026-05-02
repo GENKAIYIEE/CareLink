@@ -150,7 +150,7 @@ export default function DistributionClient({
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="border-b border-gray-100 bg-gray-50/50 p-6">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-              <Gift className="w-5 h-5 mr-2 text-blue-600" />
+              <Gift className="w-5 h-5 mr-2 text-green-600" />
               Log Benefit Distribution
             </h2>
             <p className="text-sm text-gray-500 mt-1">
@@ -187,11 +187,11 @@ export default function DistributionClient({
                         placeholder="Search by OSCA ID or Name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm bg-gray-50 text-gray-900"
+                        className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all shadow-sm bg-gray-50 text-gray-900"
                       />
                       {isSearching && (
                         <div className="absolute right-3.5 top-3">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
                         </div>
                       )}
                     </div>
@@ -204,9 +204,9 @@ export default function DistributionClient({
                               <li 
                                 key={senior.id}
                                 onClick={() => handleSelectSenior(senior)}
-                                className="px-4 py-3 hover:bg-blue-50 cursor-pointer flex items-center border-b border-gray-50 last:border-0 transition-colors"
+                                className="px-4 py-3 hover:bg-green-50 cursor-pointer flex items-center border-b border-gray-50 last:border-0 transition-colors"
                               >
-                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold overflow-hidden shrink-0 mr-4">
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold overflow-hidden shrink-0 mr-4">
                                   {senior.photoUrl ? (
                                     <Image src={senior.photoUrl} alt="" width={40} height={40} className="object-cover w-full h-full" />
                                   ) : (
@@ -236,10 +236,10 @@ export default function DistributionClient({
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-5 rounded-full -mr-10 -mt-10 blur-xl"></div>
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-500 opacity-5 rounded-full -mr-10 -mt-10 blur-xl"></div>
                     <div className="flex items-center relative z-10">
-                      <div className="w-14 h-14 rounded-full bg-white shadow-sm border border-blue-100 flex items-center justify-center text-blue-700 font-bold overflow-hidden shrink-0 mr-4">
+                      <div className="w-14 h-14 rounded-full bg-white shadow-sm border border-green-100 flex items-center justify-center text-green-700 font-bold overflow-hidden shrink-0 mr-4">
                         {selectedSenior.photoUrl ? (
                           <Image src={selectedSenior.photoUrl} alt="" width={56} height={56} className="object-cover w-full h-full" />
                         ) : (
@@ -259,7 +259,7 @@ export default function DistributionClient({
                     <button 
                       type="button"
                       onClick={() => setSelectedSenior(null)}
-                      className="relative z-10 text-sm font-medium text-blue-600 hover:text-blue-800 bg-white px-3 py-1.5 rounded-lg border border-blue-200 shadow-sm transition-all hover:shadow"
+                      className="relative z-10 text-sm font-medium text-green-600 hover:text-green-800 bg-white px-3 py-1.5 rounded-lg border border-green-200 shadow-sm transition-all hover:shadow"
                     >
                       Change
                     </button>
@@ -276,7 +276,7 @@ export default function DistributionClient({
                     value={selectedProgramId}
                     onChange={(e) => setSelectedProgramId(e.target.value)}
                     disabled={!selectedSenior}
-                    className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm bg-gray-50 text-gray-900 disabled:opacity-50 disabled:bg-gray-100 transition-all font-medium"
+                    className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none shadow-sm bg-gray-50 text-gray-900 disabled:opacity-50 disabled:bg-gray-100 transition-all font-medium"
                   >
                     <option value="" disabled>Choose a program...</option>
                     {programs.map(p => (
@@ -293,7 +293,7 @@ export default function DistributionClient({
               <div className="space-y-4">
                 <label className="block text-sm font-semibold text-gray-900">3. Claimed By</label>
                 <div className={`grid grid-cols-2 gap-4 ${!selectedSenior ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <label className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${recipientType === 'senior' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>
+                  <label className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${recipientType === 'senior' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>
                     <input type="radio" name="recipient" value="senior" checked={recipientType === 'senior'} onChange={() => setRecipientType('senior')} className="sr-only" />
                     <span className="flex flex-1">
                       <span className="flex flex-col">
@@ -303,10 +303,10 @@ export default function DistributionClient({
                         </span>
                       </span>
                     </span>
-                    <CheckCircle className={`h-5 w-5 ${recipientType === 'senior' ? 'text-blue-600' : 'text-transparent'}`} />
+                    <CheckCircle className={`h-5 w-5 ${recipientType === 'senior' ? 'text-green-600' : 'text-transparent'}`} />
                   </label>
 
-                  <label className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${recipientType === 'delegate' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-300 bg-white hover:bg-gray-50'} ${!selectedSenior?.delegate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <label className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${recipientType === 'delegate' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-300 bg-white hover:bg-gray-50'} ${!selectedSenior?.delegate ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <input type="radio" name="recipient" value="delegate" disabled={!selectedSenior?.delegate} checked={recipientType === 'delegate'} onChange={() => setRecipientType('delegate')} className="sr-only" />
                     <span className="flex flex-1">
                       <span className="flex flex-col">
@@ -317,7 +317,7 @@ export default function DistributionClient({
                         </span>
                       </span>
                     </span>
-                    <CheckCircle className={`h-5 w-5 ${recipientType === 'delegate' ? 'text-blue-600' : 'text-transparent'}`} />
+                    <CheckCircle className={`h-5 w-5 ${recipientType === 'delegate' ? 'text-green-600' : 'text-transparent'}`} />
                   </label>
                 </div>
               </div>
@@ -327,7 +327,7 @@ export default function DistributionClient({
                 <button
                   type="submit"
                   disabled={!selectedSenior || !selectedProgramId || isSubmitting}
-                  className="w-full flex items-center justify-center px-6 py-3.5 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-blue-500/30"
+                  className="w-full flex items-center justify-center px-6 py-3.5 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-green-500/30"
                 >
                   {isSubmitting ? (
                     <>
@@ -380,7 +380,7 @@ export default function DistributionClient({
                         <p className="text-sm font-semibold text-gray-900 truncate">
                           {t.senior.firstName} {t.senior.lastName}
                         </p>
-                        <p className="text-xs font-medium text-blue-600 mt-0.5 truncate">
+                        <p className="text-xs font-medium text-green-600 mt-0.5 truncate">
                           {t.program.title}
                         </p>
                         <div className="flex items-center justify-between mt-1.5">
@@ -404,7 +404,7 @@ export default function DistributionClient({
           </div>
           
           <div className="p-4 border-t border-gray-100 bg-white text-center">
-            <a href="/admin/claims" className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+            <a href="/admin/claims" className="text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
               View Full Ledger &rarr;
             </a>
           </div>

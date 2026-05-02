@@ -2,9 +2,12 @@ import { PrismaClient } from '@/generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  // PrismaPg adapter requires a DIRECT connection — it is NOT compatible with
+  // PgBouncer transaction-mode pooling (pgbouncer=true / port 6543).
+  // Use DIRECT_URL (port 5432) so the server never closes the connection prematurely.
+  const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error('DATABASE_URL environment variable is not set.');
+    throw new Error('Neither DIRECT_URL nor DATABASE_URL environment variable is set.');
   }
   const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
