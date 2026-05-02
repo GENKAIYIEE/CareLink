@@ -1,0 +1,270 @@
+/* ================================================================
+   CARELINK — ADMIN LOGIN PAGE STYLES
+   Premium dark-blue government aesthetic
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Root / Page Shell ────────────────────────────────────────── */
+.admin-login-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #0a0f1e 0%, #0d1b3e 50%, #071428 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Animated Background Orbs ─────────────────────────────────── */
+.admin-bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+  pointer-events: none;
+  animation: adminOrbFloat 12s ease-in-out infinite;
+}
+
+.admin-bg-orb-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, #1e40af, #3b82f6);
+  top: -200px;
+  right: -150px;
+  animation-delay: 0s;
+}
+
+.admin-bg-orb-2 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, #0891b2, #0e7490);
+  bottom: -180px;
+  left: -120px;
+  animation-delay: -6s;
+}
+
+@keyframes adminOrbFloat {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-30px) scale(1.05); }
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.admin-login-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: adminCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes adminCardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── Card Header ─────────────────────────────────────────────── */
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.admin-logo-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+.admin-portal-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #60a5fa;
+  margin: 0 0 0.2rem;
+}
+
+.admin-portal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f0f9ff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* ── Divider ─────────────────────────────────────────────────── */
+.admin-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-divider::before,
+.admin-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-divider span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+/* ── Form ────────────────────────────────────────────────────── */
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.03em;
+}
+
+.admin-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.admin-input-icon {
+  position: absolute;
+  left: 0.875rem;
+  color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+.admin-input {
+  width: 100%;
+  padding: 0.75rem 0.875rem 0.75rem 2.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #f0f9ff;
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.admin-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.admin-input:focus {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.admin-input:focus + .admin-input-icon,
+.admin-input-wrapper:focus-within .admin-input-icon {
+  color: #60a5fa;
+}
+
+/* ── Error Banner ────────────────────────────────────────────── */
+.admin-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: 0.83rem;
+  font-weight: 500;
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-6px); }
+  75%       { transform: translateX(6px); }
+}
+
+/* ── Submit Button ───────────────────────────────────────────── */
+.admin-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-top: 0.25rem;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.45);
+  letter-spacing: 0.02em;
+}
+
+.admin-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.55);
+}
+
+.admin-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.admin-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Footer Note ─────────────────────────────────────────────── */
+.admin-footer-note {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.25);
+}

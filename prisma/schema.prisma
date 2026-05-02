@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  fullName     String
+  passwordHash String   // bcrypt-hashed password
+  role         String   @default("Staff") // "Staff", "SuperAdmin", "BHW"
+  createdAt    DateTime @default(now())
+  announcements Announcement[]
+}
+
+model Senior {
+  id               String    @id @default(uuid())
+  oscaId           String    @unique
+  firstName        String
+  middleName       String?
+  lastName         String
+  gender           String?
+  civilStatus      String?
+  dateOfBirth      DateTime
+  bloodType        String?
+  healthConditions String?
+  photoUrl         String?
+  passwordHash     String?
+  emergencyContactName String?
+  emergencyContactNum  String?
+  status           String    @default("Active")
+  barangay         String
+  contactNumber    String?
+  delegateId       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  claims           Claim[]
+  delegate         Delegate? @relation(fields: [delegateId], references: [id])
+}
+
+model Delegate {
+  id            String   @id @default(uuid())
+  fullName      String
+  relationship  String
+  contactNumber String
+  idPhotoUrl    String?
+  createdAt     DateTime @default(now())
+  claimsMade    Claim[]
+  seniors       Senior[]
+}
+
+model BenefitProgram {
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  distributionDate DateTime
+  type             String
+  createdAt        DateTime @default(now())
+  claims           Claim[]
+}
+
+model Claim {
+  id          String         @id @default(uuid())
+  status      String         @default("Unclaimed")
+  claimedAt   DateTime?
+  seniorId    String
+  programId   String
+  claimedById String?
+  claimedBy   Delegate?      @relation(fields: [claimedById], references: [id])
+  program     BenefitProgram @relation(fields: [programId], references: [id])
+  senior      Senior         @relation(fields: [seniorId], references: [id])
+}
+
+model Announcement {
+  id             String   @id @default(uuid())
+  title          String
+  content        String
+  category       String   @default("General") // "Program", "Beneficiary", "Date", "Urgent", "General"
+  status         String   @default("Draft") // "Draft", "Published", "Archived"
+  targetBarangay String?  // Optional: For targeting specific barangays, or null for ALL
+  authorId       String
+  author         Admin    @relation(fields: [authorId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
