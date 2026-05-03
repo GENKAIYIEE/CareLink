@@ -35,7 +35,7 @@ export default function AdminLoginPage() {
           <div className="relative z-10 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center ring-1 ring-white/20 overflow-hidden shrink-0">
               <Image
-                src="/images/municipal-agoo.png"
+                src="/images/logo-agoo.jpg"
                 alt="Municipal Logo"
                 width={40}
                 height={40}
