@@ -1,14 +1,14 @@
 'use client';
 
 import { useActionState } from 'react';
-import { adminLogin, AdminLoginState } from '@/lib/actions/auth';
+import { login, LoginState } from '@/lib/actions/auth';
 import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
 export default function AdminLoginForm() {
-  const [state, action, pending] = useActionState<AdminLoginState, FormData>(
-    adminLogin,
+  const [state, action, pending] = useActionState<LoginState, FormData>(
+    login,
     undefined
   );
   const [showPassword, setShowPassword] = useState(false);
@@ -27,19 +27,19 @@ export default function AdminLoginForm() {
         </div>
       )}
 
-      {/* Username */}
+      {/* Username / OSCA ID */}
       <div className="flex flex-col gap-1.5">
         <label
-          htmlFor="admin-email"
+          htmlFor="admin-identifier"
           className="text-[12px] font-semibold text-white/50 uppercase tracking-widest"
         >
-          Username
+          Username / OSCA ID
         </label>
         <input
-          id="admin-email"
-          name="email"
+          id="admin-identifier"
+          name="identifier"
           type="text"
-          placeholder="Enter your username"
+          placeholder="Enter your username or OSCA ID"
           autoComplete="username"
           required
           suppressHydrationWarning

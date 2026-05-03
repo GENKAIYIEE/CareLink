@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 
 export type SessionPayload = {
   userId: string;
-  role: 'admin' | 'senior';
+  role: 'ADMIN' | 'SENIOR';
   expiresAt: Date;
 };
 
@@ -46,7 +46,7 @@ export async function decrypt(token: string | undefined = '') {
 
 const COOKIE_NAME = 'carelink_session';
 
-export async function createSession(userId: string, role: 'admin' | 'senior') {
+export async function createSession(userId: string, role: 'ADMIN' | 'SENIOR') {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const token = await encrypt({ userId, role, expiresAt });
   const cookieStore = await cookies();
