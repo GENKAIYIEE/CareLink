@@ -3,6 +3,7 @@ import { decrypt } from '@/lib/session';
 
 // Protected route prefixes and their required roles
 const ADMIN_ROUTES = ['/admin'];
+const SENIOR_ROUTES = ['/senior'];
 const ADMIN_LOGIN = '/admin/login';
 
 export default async function middleware(req: NextRequest) {
@@ -13,26 +14,41 @@ export default async function middleware(req: NextRequest) {
   const isAdminRoute = ADMIN_ROUTES.some(
     (r) => path.startsWith(r) && path !== ADMIN_LOGIN
   );
+  const isSeniorRoute = SENIOR_ROUTES.some((r) => path.startsWith(r));
 
-  // --- Redirect root to appropriate admin page ---
+  // --- Redirect root to appropriate portal ---
   if (path === '/') {
-    if (session?.role === 'admin') {
+    if (session?.role === 'ADMIN') {
       return NextResponse.redirect(new URL('/admin', req.nextUrl));
+    }
+    if (session?.role === 'SENIOR') {
+      return NextResponse.redirect(new URL('/senior', req.nextUrl));
     }
     return NextResponse.redirect(new URL(ADMIN_LOGIN, req.nextUrl));
   }
 
-
   // --- Protect admin routes ---
   if (isAdminRoute) {
-    if (!session || session.role !== 'admin') {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.redirect(new URL(ADMIN_LOGIN, req.nextUrl));
     }
   }
 
-  // --- Redirect already-logged-in users away from login pages ---
-  if (path === ADMIN_LOGIN && session?.role === 'admin') {
-    return NextResponse.redirect(new URL('/admin', req.nextUrl));
+  // --- Protect senior routes ---
+  if (isSeniorRoute) {
+    if (!session || session.role !== 'SENIOR') {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, req.nextUrl));
+    }
+  }
+
+  // --- Redirect already-logged-in users away from login page ---
+  if (path === ADMIN_LOGIN) {
+    if (session?.role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin', req.nextUrl));
+    }
+    if (session?.role === 'SENIOR') {
+      return NextResponse.redirect(new URL('/senior', req.nextUrl));
+    }
   }
 
   return NextResponse.next();
