@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   UserPlus,
+  Megaphone,
 } from 'lucide-react';
 import { logout } from '@/lib/actions/auth';
 
@@ -21,7 +22,7 @@ const navigation = [
   { name: 'Benefits',     href: '/admin/distribution',  icon: CreditCard },
   { name: 'Programs',     href: '/admin/programs',      icon: CalendarDays },
   { name: 'Reports',      href: '/admin/claims',        icon: BarChart2 },
-  { name: 'Audit Trail',  href: '/admin/announcements', icon: History },
+  { name: 'Announcements',  href: '/admin/announcements', icon: Megaphone },
 ];
 
 export default function AdminSidebar() {
