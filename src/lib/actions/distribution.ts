@@ -95,6 +95,75 @@ export async function logAssistance(data: {
   }
 }
 
+export async function logAssistanceBatch(data: { seniorIds: string[]; programId: string }) {
+  try {
+    const existingClaims = await prisma.claim.findMany({
+      where: {
+        programId: data.programId,
+        seniorId: { in: data.seniorIds }
+      }
+    });
+
+    const existingSeniorIds = new Set(existingClaims.map(c => c.seniorId));
+    
+    // Update existing Unclaimed claims
+    const toUpdate = existingClaims.filter(c => c.status === 'Unclaimed');
+    if (toUpdate.length > 0) {
+      await prisma.claim.updateMany({
+        where: { id: { in: toUpdate.map(c => c.id) } },
+        data: {
+          status: 'Claimed',
+          claimedAt: new Date(),
+        }
+      });
+    }
+
+    // Create new claims for those without any
+    const toCreateIds = data.seniorIds.filter(id => !existingSeniorIds.has(id));
+    if (toCreateIds.length > 0) {
+      await prisma.claim.createMany({
+        data: toCreateIds.map(seniorId => ({
+          seniorId,
+          programId: data.programId,
+          status: 'Claimed',
+          claimedAt: new Date(),
+        }))
+      });
+    }
+
+    revalidatePath('/admin/distribution');
+    revalidatePath('/admin/claims');
+    return { success: true, count: toCreateIds.length + toUpdate.length };
+  } catch (error) {
+    console.error("Error logging batch assistance:", error);
+    return { success: false, error: 'Failed to log assistance for all seniors.' };
+  }
+}
+
+export async function getBarangays() {
+  try {
+    const distinct = await prisma.senior.findMany({
+      select: { barangay: true },
+      distinct: ['barangay']
+    });
+    return distinct.map(d => d.barangay).filter(Boolean).sort();
+  } catch (error) {
+    console.error("Error fetching barangays:", error);
+    return [];
+  }
+}
+
+export async function getSeniorsByBarangay(barangay: string) {
+  try {
+    return await prisma.senior.findMany({
+      where: { barangay },
+      include: { delegate: true }
+    });
+  } catch (error) {
+    console.error("Error fetching seniors by barangay:", error);
+    return [];
+  }
+}
 export async function getRecentTransactions() {
   try {
     const transactions = await prisma.claim.findMany({

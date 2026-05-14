@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { Plus, Search } from 'lucide-react';
-
+import { SeniorTableActions } from './SeniorTableActions';
 export default async function SeniorsPage() {
   const seniors = await prisma.senior.findMany({
     orderBy: { lastName: 'asc' },
@@ -50,8 +50,8 @@ export default async function SeniorsPage() {
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OSCA ID</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Barangay</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Edit</span>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 text-right text-sm font-semibold text-gray-900">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -80,9 +80,7 @@ export default async function SeniorsPage() {
                           </span>
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <Link href={`/admin/seniors/${senior.id}`} className="text-green-600 hover:text-green-900">
-                            Edit<span className="sr-only">, {senior.firstName}</span>
-                          </Link>
+                          <SeniorTableActions seniorId={senior.id} seniorName={senior.firstName} />
                         </td>
                       </tr>
                     ))

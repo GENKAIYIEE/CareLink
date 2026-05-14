@@ -59,13 +59,18 @@ function aggregateDemographics(
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminDashboard() {
-  const [totalSeniors, totalPrograms, totalClaims, activeSeniors] = await Promise.all([
+  const [totalSeniors, totalPrograms, totalClaims, activeSeniors, recentActivities] = await Promise.all([
     prisma.senior.count(),
     prisma.benefitProgram.count(),
     prisma.claim.count(),
     prisma.senior.findMany({
       where: { status: 'Active' },
       select: { gender: true, dateOfBirth: true },
+    }),
+    prisma.activityLog.findMany({
+      take: 3,
+      orderBy: { createdAt: 'desc' },
+      include: { admin: true },
     }),
   ]);
 
@@ -161,41 +166,37 @@ export default async function AdminDashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl border-2 border-slate-200 p-6 flex flex-col h-full shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-slate-900">Recent Activity</h3>
-            <button suppressHydrationWarning className="text-green-700 text-sm font-bold hover:underline flex items-center gap-1">
+            <Link href="/admin/activity" suppressHydrationWarning className="text-green-700 text-sm font-bold hover:underline flex items-center gap-1">
               View All <span className="text-lg leading-none">→</span>
-            </button>
+            </Link>
           </div>
           <div className="flex flex-col">
-            {/* Hardcoded Activities for UI fidelity as per reference */}
-            <div className="flex gap-4 items-start py-4 border-b-2 border-slate-100 last:border-0">
-              <div className="h-10 w-10 rounded-full bg-green-50 text-green-700 flex items-center justify-center flex-shrink-0 mt-1">
-                <UserCheck className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-900"><strong className="font-bold">Sarah Jenkins</strong> completed a new household registration.</p>
-                <p className="text-xs font-semibold text-slate-500 mt-1">10 minutes ago • ID: REG-8921</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start py-4 border-b-2 border-slate-100 last:border-0">
-              <div className="h-10 w-10 rounded-full bg-orange-50 text-orange-700 flex items-center justify-center flex-shrink-0 mt-1">
-                <Banknote className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-900"><strong className="font-bold">Housing Assistance</strong> batch disbursement successful.</p>
-                <p className="text-xs font-semibold text-slate-500 mt-1">1 hour ago • 450 recipients</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start py-4 border-b-2 border-slate-100 last:border-0">
-              <div className="h-10 w-10 rounded-full bg-red-50 text-red-700 flex items-center justify-center flex-shrink-0 mt-1">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-900">System flagged <strong className="font-bold">3 applications</strong> for missing documentation.</p>
-                <p className="text-xs font-semibold text-slate-500 mt-1">2 hours ago • Action Required</p>
-              </div>
-            </div>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm text-slate-500 italic py-4">No recent activity.</p>
+            ) : (
+              recentActivities.map((activity) => (
+                <div key={activity.id} className="flex gap-4 items-start py-4 border-b-2 border-slate-100 last:border-0">
+                  <div className="h-10 w-10 rounded-full bg-slate-50 text-slate-700 flex items-center justify-center flex-shrink-0 mt-1">
+                    <UserCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-900">
+                      {activity.action}: <strong className="font-bold">{activity.details}</strong>
+                    </p>
+                    <p className="text-xs font-semibold text-slate-500 mt-1">
+                      {new Intl.DateTimeFormat('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      }).format(new Date(activity.createdAt))} • By {activity.admin.fullName}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

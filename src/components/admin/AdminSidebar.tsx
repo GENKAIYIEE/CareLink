@@ -23,6 +23,7 @@ const navigation = [
   { name: 'Programs',     href: '/admin/programs',      icon: CalendarDays },
   { name: 'Reports',      href: '/admin/claims',        icon: BarChart2 },
   { name: 'Announcements',  href: '/admin/announcements', icon: Megaphone },
+  { name: 'Activity Log',   href: '/admin/activity',      icon: History },
 ];
 
 export default function AdminSidebar() {

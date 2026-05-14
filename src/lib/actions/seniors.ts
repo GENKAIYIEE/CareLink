@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-
+import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/session";
 export async function registerSeniorAction(data: any) {
   try {
     // 1. Generate OSCA ID (e.g. 2026-0001)
@@ -40,6 +41,18 @@ export async function registerSeniorAction(data: any) {
       },
     });
 
+    // 5. Log the Activity
+    const session = await getSession();
+    if (session && session.role === 'ADMIN') {
+      await prisma.activityLog.create({
+        data: {
+          action: "Registered Senior",
+          details: `${senior.firstName} ${senior.lastName} (${senior.oscaId})`,
+          adminId: session.userId,
+        },
+      });
+    }
+
     return {
       success: true,
       data: {
@@ -50,5 +63,53 @@ export async function registerSeniorAction(data: any) {
   } catch (error: any) {
     console.error("Error registering senior:", error);
     return { success: false, error: "Database error during registration." };
+  }
+}
+
+export async function updateSeniorAction(id: string, data: any) {
+  try {
+    const updatedSenior = await prisma.senior.update({
+      where: { id },
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleName: data.middleName || null,
+        dateOfBirth: new Date(data.dateOfBirth),
+        gender: data.gender,
+        civilStatus: data.civilStatus,
+        barangay: data.barangay,
+        bloodType: data.bloodType || null,
+        healthConditions: data.healthConditions || null,
+        emergencyContactName: data.emergencyContactName,
+        emergencyContactNum: data.emergencyContactNum,
+      },
+    });
+    
+    revalidatePath("/admin/seniors");
+    revalidatePath(`/admin/seniors/${id}`);
+    
+    return { success: true, data: updatedSenior };
+  } catch (error: any) {
+    console.error("Error updating senior:", error);
+    return { success: false, error: "Database error during update." };
+  }
+}
+
+export async function deleteSeniorAction(id: string) {
+  try {
+    // Handle cascading deletes: delete related claims first
+    await prisma.claim.deleteMany({
+      where: { seniorId: id }
+    });
+    
+    await prisma.senior.delete({
+      where: { id }
+    });
+    
+    revalidatePath("/admin/seniors");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting senior:", error);
+    return { success: false, error: "Database error during deletion." };
   }
 }
