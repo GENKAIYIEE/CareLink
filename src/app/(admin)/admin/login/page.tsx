@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import LoginForm from './LoginForm';
 import Image from 'next/image';
+import SuccessBanner from '@/components/auth/SuccessBanner';
+
 
 export const metadata: Metadata = {
   title: 'Admin Login — CareLink',
@@ -98,6 +100,9 @@ export default function AdminLoginPage() {
 
           <div className="relative z-10 w-full max-w-sm mx-auto flex flex-col gap-7">
 
+            {/* Success Banner */}
+            <SuccessBanner />
+
             {/* Header */}
             <div>
               <p className="text-emerald-400/70 text-xs font-semibold tracking-[0.15em] uppercase mb-2">
@@ -116,11 +121,8 @@ export default function AdminLoginPage() {
 
             {/* Footer links */}
             <div className="flex flex-col items-center gap-4 pt-2 border-t border-white/5">
-              <p className="text-white/40 text-xs text-center">
-                Don't have an account?{' '}
-                <a href="#" className="text-emerald-400/80 hover:text-emerald-400 underline underline-offset-2 transition-colors">
-                  Register Now
-                </a>
+              <p className="text-white/40 text-[13px] text-center leading-relaxed">
+                Not yet registered? Visit the Municipal Social Welfare Office, Agoo, La Union during office hours <span className="text-white/70">Monday – Friday, 8:00 AM – 5:00 PM</span> to get your CareLink account.
               </p>
               <div className="flex items-center gap-4 text-[11px] text-white/25">
                 <a href="#" className="hover:text-white/50 transition-colors">Terms & Services</a>
