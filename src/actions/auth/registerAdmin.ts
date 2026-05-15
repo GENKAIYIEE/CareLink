@@ -19,7 +19,18 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export async function registerAdmin(prevState: any, formData: FormData) {
+export type RegisterAdminResult = {
+  error?: {
+    fullName?: string[];
+    email?: string[] | string;
+    role?: string[];
+    password?: string[];
+    confirmPassword?: string[];
+    registrationKey?: string[] | string;
+  };
+};
+
+export async function registerAdmin(prevState: any, formData: FormData): Promise<RegisterAdminResult> {
   const data = Object.fromEntries(formData.entries());
   
   const validatedFields = registerSchema.safeParse(data);

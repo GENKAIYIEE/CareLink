@@ -1,15 +1,15 @@
 "use client";
 
-import { useWatch, Control } from "react-hook-form";
+import { useWatch, Control, FieldValues, Path } from "react-hook-form";
 import { motion } from "framer-motion";
 
-interface PasswordStrengthBarProps {
-  control: Control<any>;
-  name: string;
+interface PasswordStrengthBarProps<TFieldValues extends FieldValues> {
+  control: Control<TFieldValues>;
+  name: Path<TFieldValues>;
 }
 
-export default function PasswordStrengthBar({ control, name }: PasswordStrengthBarProps) {
-  const password = useWatch({ control, name }) || "";
+export default function PasswordStrengthBar<TFieldValues extends FieldValues>({ control, name }: PasswordStrengthBarProps<TFieldValues>) {
+  const password = useWatch({ control, name }) as string || "";
   
   let strength = 0;
   let label = "Weak";
