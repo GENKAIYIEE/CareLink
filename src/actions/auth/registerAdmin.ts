@@ -67,5 +67,5 @@ export async function registerAdmin(prevState: any, formData: FormData): Promise
   const timestamp = format(new Date(), "MMM dd, yyyy – HH:mm");
   console.log(`Admin registered: ${email} at ${timestamp}`);
   
-  redirect("/admin/login?registered=true");
+  redirect("/login?registered=true");
 }

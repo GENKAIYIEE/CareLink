@@ -275,7 +275,7 @@ export default function AdminRegistrationPage() {
 
             <div className="mt-8 text-center">
               <span className="text-sm text-gray-500">Already have an account? </span>
-              <Link href="/admin/login" className="text-sm text-green-600 font-semibold hover:underline">
+              <Link href="/login" className="text-sm text-green-600 font-semibold hover:underline">
                 Sign in →
               </Link>
             </div>
