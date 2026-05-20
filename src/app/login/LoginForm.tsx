@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { login, LoginState } from '@/lib/actions/auth';
+import { login, LoginState } from '@/actions/auth/login';
 import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

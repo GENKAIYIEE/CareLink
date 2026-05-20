@@ -42,20 +42,7 @@ export async function login(
     redirect('/admin');
   }
 
-  // ── Step 2: Try Senior model (match by OSCA ID) ───────────────────────────
-  const senior = await prisma.senior.findUnique({
-    where: { oscaId: identifier },
-  });
 
-  if (senior) {
-    const valid = await comparePasswords(password, senior.passwordHash ?? '');
-    if (!valid) {
-      return { error: 'Invalid credentials.' };
-    }
-    // Senior matched — create session with SENIOR role and redirect
-    await createSession(senior.id, 'SENIOR');
-    redirect('/senior');
-  }
 
   // ── Neither model matched ─────────────────────────────────────────────────
   return { error: 'Invalid credentials.' };
@@ -63,7 +50,11 @@ export async function login(
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
+import { cookies } from 'next/headers';
+
 export async function logout() {
   await deleteSession();
-  redirect('/admin/login');
+  const cookieStore = await cookies();
+  cookieStore.delete('admin_token');
+  redirect('/login');
 }
