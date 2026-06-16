@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ChevronRight, ChevronLeft, Save } from "lucide-react";
+import { ChevronRight, ChevronLeft, Save, CheckCircle2, XCircle } from "lucide-react";
 import { updateSeniorAction } from "@/lib/actions/seniors";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 
 // Schema Validation
@@ -27,9 +26,8 @@ const seniorSchema = z.object({
 type SeniorFormData = z.infer<typeof seniorSchema>;
 
 export function EditSeniorForm({ senior }: { senior: any }) {
-  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const formattedDateOfBirth = senior.dateOfBirth 
     ? format(new Date(senior.dateOfBirth), "yyyy-MM-dd")
@@ -52,49 +50,42 @@ export function EditSeniorForm({ senior }: { senior: any }) {
     }
   });
 
-  const handleNext = async () => {
-    let isValid = false;
-    if (step === 1) {
-      isValid = await trigger(["firstName", "lastName", "dateOfBirth", "gender", "civilStatus", "barangay"]);
-    }
-    if (isValid) setStep(step + 1);
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5000);
   };
 
   const onSubmit = async (data: SeniorFormData) => {
     setIsSubmitting(true);
+    setToast(null);
     try {
       const res = await updateSeniorAction(senior.id, data);
       if (res.success) {
-        router.push(`/admin/seniors/${senior.id}`);
+        showToast("Senior profile updated successfully.", "success");
       } else {
-        alert(res.error || "Failed to update senior");
+        showToast("Failed to update profile. Please try again.", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("An unexpected error occurred");
+      showToast("Failed to update profile. Please try again.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col p-8">
-      {/* Progress Bar */}
-      <div className="flex items-center space-x-2 mb-8 border-b pb-6">
-        {[1, 2].map((num) => (
-          <div key={num} className="flex items-center">
-            <div className={`h-8 w-8 rounded-full flex items-center justify-center font-semibold text-sm ${step >= num ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
-              {num}
-            </div>
-            {num < 2 && <div className={`w-12 h-1 mx-2 rounded ${step > num ? 'bg-indigo-600' : 'bg-gray-100'}`} />}
-          </div>
-        ))}
-      </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col p-8 relative">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-in slide-in-from-top-5 duration-300 ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
+          {toast.type === "success" ? <CheckCircle2 className="w-5 h-5 mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
+          {toast.message}
+        </div>
+      )}
 
       <div className="flex-1">
-        <form id="edit-form" onSubmit={handleSubmit(onSubmit)}>
-          {step === 1 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+        <form id="edit-form" onSubmit={handleSubmit(onSubmit)} className="space-y-10">
+          <div>
               <h2 className="text-xl font-bold mb-4">Personal Information</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
@@ -139,10 +130,8 @@ export function EditSeniorForm({ senior }: { senior: any }) {
                 </div>
               </div>
             </div>
-          )}
 
-          {step === 2 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          <div>
               <h2 className="text-xl font-bold mb-4">Health & Emergency</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
@@ -178,39 +167,19 @@ export function EditSeniorForm({ senior }: { senior: any }) {
                 </div>
               </div>
             </div>
-          )}
         </form>
       </div>
 
       {/* Form Controls */}
-      <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between">
+      <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
         <button
-          type="button"
-          onClick={() => setStep(step - 1)}
-          disabled={step === 1}
-          className={`px-4 py-2 flex items-center font-medium ${step === 1 ? 'text-gray-300' : 'text-gray-600 hover:text-gray-900'}`}
+          form="edit-form"
+          type="submit"
+          disabled={isSubmitting}
+          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center shadow-sm transition-colors disabled:opacity-70"
         >
-          <ChevronLeft className="w-4 h-4 mr-1" /> Back
+          {isSubmitting ? "Saving..." : "Save Changes"} <Save className="w-4 h-4 ml-2" />
         </button>
-        
-        {step < 2 ? (
-          <button
-            type="button"
-            onClick={handleNext}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center shadow-sm transition-colors"
-          >
-            Next Step <ChevronRight className="w-4 h-4 ml-1" />
-          </button>
-        ) : (
-          <button
-            form="edit-form"
-            type="submit"
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center shadow-sm transition-colors disabled:opacity-70"
-          >
-            {isSubmitting ? "Saving..." : "Save Changes"} <Save className="w-4 h-4 ml-2" />
-          </button>
-        )}
       </div>
     </div>
   );

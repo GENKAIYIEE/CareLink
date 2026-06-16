@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Edit2, User, Phone, MapPin, HeartPulse, Activity } from "lucide-react";
 import { format } from "date-fns";
+import DelegateSection from "./DelegateSection";
 
 export default async function SeniorViewPage({ params }: { params: { id: string } }) {
   // Await the params to satisfy the Next.js standard for App Router dynamic segments
@@ -141,6 +142,8 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                 </dl>
               </div>
             </section>
+            
+            <DelegateSection seniorId={senior.id} initialDelegate={senior.delegate} />
             
             <section>
               <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center border-b pb-2">

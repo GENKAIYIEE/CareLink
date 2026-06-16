@@ -24,3 +24,88 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  /* Hide everything on the page */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show ONLY the ID card and its children */
+  #print-id-card,
+  #print-id-card * {
+    visibility: visible;
+  }
+
+  /* Position the ID card for printing */
+  #print-id-card {
+    position: fixed;
+    top: 10mm;
+    left: 10mm;
+    transform: none;
+
+    /* CR80 standard ID card dimensions */
+    width: 85.6mm;
+    height: 54mm;
+
+    /* Remove screen shadow for print */
+    box-shadow: none !important;
+
+    /* Force color printing */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header takes fixed height */
+  #print-id-card .print-card-header {
+    flex-shrink: 0;
+  }
+
+  /* Card body layout */
+  #print-id-card .print-card-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 3mm;
+    gap: 3mm;
+    background: white;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Photo box */
+  #print-id-card .print-photo-box {
+    width: 18mm;
+    height: 18mm;
+    flex-shrink: 0;
+    object-fit: cover;
+    object-position: center;
+    border: 0.5mm solid #1a237e;
+  }
+
+  /* Fields column */
+  #print-id-card .print-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2mm;
+    flex: 1;
+    padding-bottom: 1.5mm;
+  }
+
+  /* Emergency banner */
+  #print-id-card .print-emergency {
+    flex-shrink: 0;
+    padding: 1.5mm 3mm;
+    margin-top: auto;
+  }
+
+  /* Hide browser print headers and footers */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+}

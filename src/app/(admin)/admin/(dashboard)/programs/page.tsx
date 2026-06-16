@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Eye } from 'lucide-react';
 import { format } from 'date-fns'; // Need to install date-fns
 
 export default async function ProgramsPage() {
@@ -74,8 +74,9 @@ export default async function ProgramsPage() {
                           {format(new Date(program.distributionDate), 'MMM d, yyyy')}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <Link href={`/admin/programs/${program.id}`} className="text-green-600 hover:text-green-900">
-                            View<span className="sr-only">, {program.title}</span>
+                          <Link href={`/admin/programs/${program.id}`} className="inline-flex text-green-600 hover:text-green-800 transition-colors" title="View Program">
+                            <Eye className="h-5 w-5" />
+                            <span className="sr-only">View {program.title}</span>
                           </Link>
                         </td>
                       </tr>

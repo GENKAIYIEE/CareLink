@@ -1,25 +1,34 @@
 'use client';
 
 import { createProgram } from '@/lib/actions/programs';
-import { useFormStatus } from 'react-dom';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {pending ? 'Saving...' : 'Create Program'}
-    </button>
-  );
-}
-
 export default function NewProgramPage() {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const res = await createProgram(formData);
+      if (res.success) {
+        router.push('/admin/programs');
+      } else {
+        alert(res.error || "Failed to create program");
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An unexpected error occurred");
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center space-x-4">
@@ -35,7 +44,7 @@ export default function NewProgramPage() {
       </div>
 
       <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-        <form action={createProgram} className="px-4 py-6 sm:p-8">
+        <form onSubmit={handleSubmit} className="px-4 py-6 sm:p-8">
           <div className="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
             <div className="sm:col-span-4">
               <label htmlFor="title" className="block text-sm font-medium leading-6 text-gray-900">
@@ -108,7 +117,13 @@ export default function NewProgramPage() {
             <Link href="/admin/programs" className="text-sm font-semibold leading-6 text-gray-900 hover:text-gray-700">
               Cancel
             </Link>
-            <SubmitButton />
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Saving...' : 'Create Program'}
+            </button>
           </div>
         </form>
       </div>

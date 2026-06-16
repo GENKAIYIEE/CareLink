@@ -38,6 +38,7 @@ export async function registerSeniorAction(data: any) {
         emergencyContactName: data.emergencyContactName,
         emergencyContactNum: data.emergencyContactNum,
         passwordHash,
+        photoUrl: data.photoUrl || null,
       },
     });
 
@@ -52,6 +53,10 @@ export async function registerSeniorAction(data: any) {
         },
       });
     }
+
+    // 6. Revalidate the list
+    revalidatePath("/admin/seniors");
+    revalidatePath("/admin");
 
     return {
       success: true,
@@ -84,9 +89,20 @@ export async function updateSeniorAction(id: string, data: any) {
         emergencyContactNum: data.emergencyContactNum,
       },
     });
-    
+    const session = await getSession();
+    if (session && session.role === 'ADMIN') {
+      await prisma.activityLog.create({
+        data: {
+          action: "Updated Senior",
+          details: `Updated senior profile for ${updatedSenior.firstName} ${updatedSenior.lastName}`,
+          adminId: session.userId,
+        },
+      });
+    }
+
     revalidatePath("/admin/seniors");
     revalidatePath(`/admin/seniors/${id}`);
+    revalidatePath("/admin");
     
     return { success: true, data: updatedSenior };
   } catch (error: any) {
@@ -97,6 +113,8 @@ export async function updateSeniorAction(id: string, data: any) {
 
 export async function deleteSeniorAction(id: string) {
   try {
+    const senior = await prisma.senior.findUnique({ where: { id } });
+
     // Handle cascading deletes: delete related claims first
     await prisma.claim.deleteMany({
       where: { seniorId: id }
@@ -106,10 +124,58 @@ export async function deleteSeniorAction(id: string) {
       where: { id }
     });
     
+    const session = await getSession();
+    if (session && session.role === 'ADMIN' && senior) {
+      await prisma.activityLog.create({
+        data: {
+          action: "Deleted Senior",
+          details: `Deleted senior ${senior.firstName} ${senior.lastName}`,
+          adminId: session.userId,
+        },
+      });
+    }
+    
     revalidatePath("/admin/seniors");
+    revalidatePath("/admin");
     return { success: true };
   } catch (error: any) {
     console.error("Error deleting senior:", error);
     return { success: false, error: "Database error during deletion." };
+  }
+}
+
+export async function resetSeniorPasswordAction(id: string, newPassword: string) {
+  try {
+    const senior = await prisma.senior.findUnique({ where: { id } });
+    if (!senior) return { success: false, error: "Senior not found." };
+
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters." };
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await prisma.senior.update({
+      where: { id },
+      data: { passwordHash },
+    });
+
+    const session = await getSession();
+    if (session && session.userId) {
+      await prisma.activityLog.create({
+        data: {
+          action: "Reset Password",
+          details: `Reset portal password for senior ${senior.firstName} ${senior.lastName} (${senior.oscaId})`,
+          adminId: session.userId,
+        },
+      });
+    }
+
+    revalidatePath(`/admin/seniors/${id}`);
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error resetting password:", error);
+    return { success: false, error: "Database error during password reset." };
   }
 }
