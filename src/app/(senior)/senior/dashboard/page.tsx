@@ -70,6 +70,14 @@ export default async function SeniorDashboardPage() {
     take: 3,
   });
 
+  const currentHour = new Date().getHours();
+  let greeting = 'Magandang gabi';
+  if (currentHour >= 5 && currentHour < 12) {
+    greeting = 'Magandang umaga';
+  } else if (currentHour >= 12 && currentHour < 18) {
+    greeting = 'Magandang hapon';
+  }
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       {/* Hero Banner */}
@@ -79,7 +87,7 @@ export default async function SeniorDashboardPage() {
         </div>
         <div className="relative z-10">
           <h1 className="text-3xl font-bold mb-2">
-            Magandang umaga, {senior.firstName}!
+            {greeting}, {senior.firstName}!
           </h1>
           <p className="text-lg text-white/90 mb-6">
             Welcome back to your CareLink portal.

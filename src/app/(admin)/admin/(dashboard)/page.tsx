@@ -56,6 +56,28 @@ function aggregateDemographics(
   return { genderData, ageBracketData };
 }
 
+function getRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return "Just now";
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+  
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+    timeZone: 'Asia/Manila'
+  }).format(date);
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminDashboard() {
@@ -70,7 +92,15 @@ export default async function AdminDashboard() {
     prisma.activityLog.findMany({
       take: 3,
       orderBy: { createdAt: 'desc' },
-      include: { admin: true },
+      include: {
+        admin: {
+          select: { 
+            email: true,
+            role: true,
+            fullName: true
+          }
+        }
+      }
     }),
   ]);
 
@@ -93,7 +123,6 @@ export default async function AdminDashboard() {
             <div className="h-12 w-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center">
               <Users className="h-6 w-6" />
             </div>
-            <span className="bg-green-50 text-green-700 text-xs font-bold px-3 py-1 rounded-full">+12% this month</span>
           </div>
           <div className="mt-6">
             <p className="text-sm font-semibold text-slate-600">Total Registered Citizens</p>
@@ -177,21 +206,14 @@ export default async function AdminDashboard() {
               recentActivities.map((activity) => (
                 <div key={activity.id} className="flex gap-4 items-start py-4 border-b-2 border-slate-100 last:border-0">
                   <div className="h-10 w-10 rounded-full bg-slate-50 text-slate-700 flex items-center justify-center flex-shrink-0 mt-1">
-                    <UserCheck className="h-5 w-5" />
+                    <div className="h-3 w-3 bg-green-500 rounded-full shadow-sm"></div>
                   </div>
                   <div>
                     <p className="text-sm text-slate-900">
                       {activity.action}: <strong className="font-bold">{activity.details}</strong>
                     </p>
                     <p className="text-xs font-semibold text-slate-500 mt-1">
-                      {new Intl.DateTimeFormat('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true,
-                      }).format(new Date(activity.createdAt))} • By {activity.admin.fullName}
+                      {getRelativeTime(new Date(activity.createdAt))} • By {activity.admin.fullName}
                     </p>
                   </div>
                 </div>

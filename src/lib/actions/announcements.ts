@@ -29,6 +29,14 @@ export async function createAnnouncement(data: {
       },
     });
 
+    await prisma.activityLog.create({
+      data: {
+        action: "Created Announcement",
+        details: `Created announcement ${announcement.title}`,
+        adminId: session.userId,
+      },
+    });
+
     revalidatePath("/admin/announcements");
     revalidatePath("/admin"); // Revalidate dashboard
     return { success: true, announcement };
@@ -95,6 +103,17 @@ export async function updateAnnouncement(
       data,
     });
 
+    const session = await getSession();
+    if (session && session.role === 'ADMIN') {
+      await prisma.activityLog.create({
+        data: {
+          action: "Updated Announcement",
+          details: `Updated announcement ${announcement.title}`,
+          adminId: session.userId,
+        },
+      });
+    }
+
     revalidatePath("/admin/announcements");
     revalidatePath("/admin");
     return { success: true, announcement };
@@ -106,9 +125,22 @@ export async function updateAnnouncement(
 
 export async function deleteAnnouncement(id: string) {
   try {
+    const announcement = await prisma.announcement.findUnique({ where: { id } });
+
     await prisma.announcement.delete({
       where: { id },
     });
+
+    const session = await getSession();
+    if (session && session.role === 'ADMIN' && announcement) {
+      await prisma.activityLog.create({
+        data: {
+          action: "Deleted Announcement",
+          details: `Deleted announcement ${announcement.title}`,
+          adminId: session.userId,
+        },
+      });
+    }
 
     revalidatePath("/admin/announcements");
     revalidatePath("/admin");

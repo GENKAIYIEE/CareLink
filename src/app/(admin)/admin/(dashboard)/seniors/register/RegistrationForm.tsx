@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, CheckCircle2, Printer, Camera } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, Printer, Camera, User } from "lucide-react";
 import { registerSeniorAction } from "@/lib/actions/seniors";
+import { uploadPhotoAction } from "@/lib/actions/upload";
+import { PhotoEditor, CropState } from "./PhotoEditor";
 
 // Schema Validation
 const seniorSchema = z.object({
@@ -29,6 +31,70 @@ export function RegistrationForm() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successData, setSuccessData] = useState<{ oscaId: string; password: string } | null>(null);
+
+  const [rawImageFile, setRawImageFile] = useState<File | null>(null);
+  const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
+  const [imageRatio, setImageRatio] = useState<number | null>(null);
+  const [crop, setCrop] = useState<CropState>({ x: 0, y: 0, zoom: 1 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Photo must be under 2MB. Please choose a smaller file.");
+      return;
+    }
+    
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      alert("Only JPG, PNG, and WEBP images are allowed");
+      return;
+    }
+
+    setRawImageFile(file);
+    const url = URL.createObjectURL(file);
+    setRawImageUrl(url);
+
+    const img = new Image();
+    img.onload = () => {
+      setImageRatio(img.naturalWidth / img.naturalHeight);
+      setCrop({ x: 0, y: 0, zoom: 1 });
+    };
+    img.src = url;
+  };
+
+  const generateCroppedBlob = async (): Promise<Blob | null> => {
+    if (!rawImageUrl || !imageRatio) return null;
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(null);
+
+        canvas.width = 600;
+        canvas.height = 600;
+
+        const coverWidthRatio = imageRatio > 1 ? imageRatio : 1;
+        const coverHeightRatio = imageRatio > 1 ? 1 : 1 / imageRatio;
+
+        const drawWidth = canvas.width * coverWidthRatio * crop.zoom;
+        const drawHeight = canvas.height * coverHeightRatio * crop.zoom;
+        
+        const drawX = (crop.x / 100) * canvas.width;
+        const drawY = (crop.y / 100) * canvas.height;
+
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+
+        canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.9);
+      };
+      img.src = rawImageUrl;
+    });
+  };
 
   const { register, handleSubmit, watch, trigger, formState: { errors } } = useForm<SeniorFormData>({
     resolver: zodResolver(seniorSchema),
@@ -56,7 +122,26 @@ export function RegistrationForm() {
   const onSubmit = async (data: SeniorFormData) => {
     setIsSubmitting(true);
     try {
-      const res = await registerSeniorAction(data);
+      let photoUrl = null;
+      if (rawImageUrl) {
+        const blob = await generateCroppedBlob();
+        if (blob) {
+          const file = new File([blob], "cropped-photo.jpg", { type: "image/jpeg" });
+          const formData = new FormData();
+          formData.append("file", file);
+          const uploadRes = await uploadPhotoAction(formData);
+          if (uploadRes.success) {
+            photoUrl = uploadRes.url;
+          } else {
+            alert(uploadRes.error || "Failed to upload photo");
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      const submitData = { ...data, photoUrl };
+      const res = await registerSeniorAction(submitData);
       if (res.success && res.data) {
         setSuccessData(res.data);
         setStep(3); // Move to Success/Print step
@@ -72,7 +157,9 @@ export function RegistrationForm() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 300);
   };
 
   return (
@@ -139,6 +226,36 @@ export function RegistrationForm() {
                     <input {...register("barangay")} className="w-full border p-2 rounded-lg" placeholder="e.g. San Miguel" />
                     {errors.barangay && <span className="text-red-500 text-xs">{errors.barangay.message}</span>}
                   </div>
+
+                  <div className="col-span-2 mt-4">
+                    <h3 className="text-sm font-medium mb-2 border-b pb-2">Photo (Optional)</h3>
+                    {!rawImageUrl ? (
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full max-w-[280px] h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 hover:border-indigo-300 cursor-pointer transition-colors"
+                      >
+                        <Camera className="w-8 h-8 mb-2 text-gray-400" />
+                        <span className="font-medium text-sm">Upload Photo</span>
+                        <span className="text-[10px] text-gray-400 mt-1">JPEG, PNG or WEBP • Max 2MB</span>
+                      </div>
+                    ) : (
+                      <PhotoEditor 
+                        imageUrl={rawImageUrl}
+                        imageRatio={imageRatio!}
+                        crop={crop}
+                        onChangeCrop={setCrop}
+                        onReset={() => setCrop({ x: 0, y: 0, zoom: 1 })}
+                        onChangePhoto={() => fileInputRef.current?.click()}
+                      />
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/jpeg, image/png, image/webp" 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      onChange={handlePhotoChange} 
+                    />
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -203,7 +320,7 @@ export function RegistrationForm() {
                   <button type="button" onClick={() => { setStep(1); setSuccessData(null); /* reset form */ }} className="px-6 py-2 border rounded-lg hover:bg-gray-50 font-medium">
                     Register Another
                   </button>
-                  <button type="button" onClick={handlePrint} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center shadow-sm">
+                  <button type="button" onClick={handlePrint} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center shadow-sm">
                     <Printer className="w-4 h-4 mr-2" />
                     Print ID Card
                   </button>
@@ -253,65 +370,84 @@ export function RegistrationForm() {
           <p className="text-sm font-semibold text-gray-400 mb-4 text-center print:hidden">Live ID Card Preview</p>
           
           {/* THE ID CARD */}
-          <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200 relative print:shadow-none print:border-black print:rounded-none" style={{ aspectRatio: '85.6/53.98' }}>
+          <div id="print-id-card" className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200 relative print:shadow-none print:border-black print:rounded-none" style={{ aspectRatio: '85.6/53.98' }}>
             {/* Header */}
-            <div className="bg-indigo-900 text-white p-2 sm:p-3 flex items-center text-center print:p-2">
+            <div className="print-card-header bg-indigo-900 text-white py-2 px-2 sm:py-2.5 flex items-center justify-center text-center print:py-2">
               <div className="w-full">
-                <p className="text-[10px] sm:text-xs font-bold leading-tight uppercase">Republic of the Philippines</p>
-                <p className="text-[8px] sm:text-[10px] text-indigo-200 uppercase tracking-wider">Municipality of Agoo, La Union</p>
-                <p className="text-xs sm:text-sm font-bold text-yellow-400 mt-1 uppercase">Senior Citizen ID</p>
+                <p className="text-[10px] sm:text-xs font-bold leading-none uppercase mb-[2px]">Republic of the Philippines</p>
+                <p className="text-[7px] sm:text-[9px] text-indigo-200 uppercase tracking-wider leading-none">Municipality of Agoo, La Union</p>
+                <p className="text-xs sm:text-sm font-bold text-yellow-400 mt-[4px] uppercase leading-none">Senior Citizen ID</p>
               </div>
             </div>
 
             {/* Body */}
-            <div className="p-3 sm:p-4 flex gap-3 print:p-3">
+            <div className="print-card-body p-3 pb-[24px] sm:p-4 sm:pb-[28px] flex items-start gap-3 sm:gap-4 print:p-4">
               {/* Photo Area */}
-              <div className="w-20 h-24 sm:w-24 sm:h-28 bg-gray-100 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center text-gray-400 shrink-0 print:border-solid print:border-gray-800">
-                <Camera className="w-6 h-6 mb-1 print:hidden" />
-                <span className="text-[8px] print:hidden">Add Photo</span>
+              <div 
+                className="print-photo-box w-20 h-20 sm:w-[84px] sm:h-[84px] bg-gray-100 border border-gray-300 rounded shadow-sm flex flex-col items-center justify-center text-gray-400 shrink-0 print:border-gray-800 relative overflow-hidden"
+              >
+                {rawImageUrl && imageRatio ? (
+                  <img 
+                    src={rawImageUrl} 
+                    alt="Preview" 
+                    className="absolute max-w-none pointer-events-none"
+                    style={{
+                      left: `${crop.x}%`,
+                      top: `${crop.y}%`,
+                      width: `${(imageRatio > 1 ? imageRatio : 1) * crop.zoom * 100}%`,
+                      height: `${(imageRatio > 1 ? 1 : 1 / imageRatio) * crop.zoom * 100}%`,
+                      transformOrigin: '0 0'
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Camera className="w-6 h-6 mb-1 print:hidden" />
+                    <span className="text-[8px] print:hidden">Photo</span>
+                  </>
+                )}
               </div>
               
               {/* Details Area */}
-              <div className="flex-1 min-w-0">
-                <div className="mb-2">
-                  <p className="text-[8px] text-gray-500 uppercase leading-none mb-[2px]">ID Number</p>
-                  <p className="font-mono font-bold text-red-600 text-sm leading-none">
+              <div className="print-fields flex-1 min-w-0 flex flex-col gap-[3px] sm:gap-1">
+                <div>
+                  <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">ID Number</p>
+                  <p className="font-mono font-bold text-red-600 text-[12px] sm:text-[14px] leading-none">
                     {successData?.oscaId || "OSCA-XXXX-XXXX"}
                   </p>
                 </div>
 
-                <div className="mb-2">
-                  <p className="text-[8px] text-gray-500 uppercase leading-none mb-[2px]">Name</p>
-                  <p className="font-bold text-gray-900 text-sm uppercase leading-tight truncate">
+                <div>
+                  <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">Name</p>
+                  <p className="font-bold text-gray-900 text-[11px] sm:text-[12px] uppercase leading-tight truncate">
                     {formData.lastName || 'LASTNAME'}, {formData.firstName || 'FIRSTNAME'}
                   </p>
-                  <p className="text-[10px] text-gray-600 uppercase truncate">
+                  <p className="text-[8px] sm:text-[9px] text-gray-600 uppercase mt-[1px] truncate">
                     {formData.middleName || 'M.I.'}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1 mb-2">
+                <div className="grid grid-cols-2 gap-1">
                   <div>
-                    <p className="text-[8px] text-gray-500 uppercase leading-none">DOB</p>
-                    <p className="text-[10px] font-semibold">{formData.dateOfBirth || '--/--/----'}</p>
+                    <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">DOB</p>
+                    <p className="text-[9px] sm:text-[10px] font-semibold leading-none">{formData.dateOfBirth || '--/--/----'}</p>
                   </div>
                   <div>
-                    <p className="text-[8px] text-gray-500 uppercase leading-none">Blood</p>
-                    <p className="text-[10px] font-semibold text-red-600">{formData.bloodType || '--'}</p>
+                    <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">Blood</p>
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-red-600 leading-none">{formData.bloodType || '--'}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-[8px] text-gray-500 uppercase leading-none">Barangay</p>
-                  <p className="text-[10px] font-semibold truncate uppercase">{formData.barangay || 'BRGY NAME'}</p>
+                  <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">Barangay</p>
+                  <p className="text-[9px] sm:text-[10px] font-semibold truncate uppercase leading-none">{formData.barangay || 'BRGY NAME'}</p>
                 </div>
               </div>
             </div>
             
             {/* Footer / Emergency Contact */}
-            <div className="absolute bottom-0 left-0 right-0 bg-yellow-400 p-1 sm:p-2 text-center print:p-1">
-              <p className="text-[8px] font-bold text-yellow-900 uppercase">In case of emergency</p>
-              <p className="text-[9px] font-bold text-black truncate">
+            <div className="print-emergency absolute bottom-0 left-0 right-0 bg-yellow-400 py-1 px-2 text-center print:py-1 z-10">
+              <p className="text-[6px] font-bold text-yellow-900 uppercase leading-none mb-[1px]">In case of emergency</p>
+              <p className="text-[8px] font-bold text-black leading-none truncate">
                 {formData.emergencyContactName || 'NAME'} - {formData.emergencyContactNum || 'NUMBER'}
               </p>
             </div>

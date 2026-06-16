@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { EditSeniorForm } from "./EditSeniorForm";
+import PortalAccessCard from "../PortalAccessCard";
 
 export default async function EditSeniorPage({ params }: { params: { id: string } }) {
   const resolvedParams = await params;
@@ -30,6 +31,7 @@ export default async function EditSeniorPage({ params }: { params: { id: string 
       </div>
 
       <EditSeniorForm senior={senior} />
+      <PortalAccessCard senior={senior} />
     </div>
   );
 }

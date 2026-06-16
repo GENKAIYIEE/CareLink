@@ -23,17 +23,7 @@ export default function AdminHeader() {
 
 
 
-      <div className="flex items-center gap-3 text-green-900">
-        <button suppressHydrationWarning aria-label="Language" className="hover:bg-slate-100 transition-colors p-2 rounded-full flex items-center justify-center">
-          <Globe className="h-5 w-5" />
-        </button>
-        <button suppressHydrationWarning aria-label="Accessibility" className="hover:bg-slate-100 transition-colors p-2 rounded-full flex items-center justify-center">
-          <Accessibility className="h-5 w-5" />
-        </button>
-        <div className="h-10 w-10 bg-green-900 text-white rounded-full flex items-center justify-center overflow-hidden border-2 border-green-900 ml-1">
-          <User className="h-5 w-5" />
-        </div>
-      </div>
+
     </header>
   );
 }

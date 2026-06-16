@@ -2,6 +2,19 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { getSession } from "@/lib/session";
+
+// Helper to reliably get YYYY-MM-DD in Asia/Manila (UTC+8)
+function getManilaDateString(date: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
 
 // Search seniors for the distribution tracker combobox
 export async function searchSeniors(query: string) {
@@ -49,6 +62,18 @@ export async function logAssistance(data: {
   claimedById?: string;
 }) {
   try {
+    const program = await prisma.benefitProgram.findUnique({
+      where: { id: data.programId }
+    });
+    if (!program) return { success: false, error: 'Program not found.' };
+
+    const todayStr = getManilaDateString(new Date());
+    const distStr = getManilaDateString(program.distributionDate);
+    
+    if (todayStr < distStr) {
+      return { success: false, error: "Claims for this program cannot be recorded before the distribution date." };
+    }
+
     // Check if claim already exists
     const existingClaim = await prisma.claim.findFirst({
       where: {
@@ -86,8 +111,20 @@ export async function logAssistance(data: {
       });
     }
 
+    const session = await getSession();
+    if (session && session.role === 'ADMIN') {
+      await prisma.activityLog.create({
+        data: {
+          action: "Logged Assistance",
+          details: `Logged claim for ${claim.senior.firstName} ${claim.senior.lastName} under ${claim.program.title}`,
+          adminId: session.userId,
+        },
+      });
+    }
+
     revalidatePath('/admin/distribution');
     revalidatePath('/admin/claims');
+    revalidatePath('/admin');
     return { success: true, claim };
   } catch (error) {
     console.error("Error logging assistance:", error);
@@ -97,6 +134,18 @@ export async function logAssistance(data: {
 
 export async function logAssistanceBatch(data: { seniorIds: string[]; programId: string }) {
   try {
+    const program = await prisma.benefitProgram.findUnique({
+      where: { id: data.programId }
+    });
+    if (!program) return { success: false, error: 'Program not found.' };
+
+    const todayStr = getManilaDateString(new Date());
+    const distStr = getManilaDateString(program.distributionDate);
+    
+    if (todayStr < distStr) {
+      return { success: false, error: "Claims for this program cannot be recorded before the distribution date." };
+    }
+
     const existingClaims = await prisma.claim.findMany({
       where: {
         programId: data.programId,

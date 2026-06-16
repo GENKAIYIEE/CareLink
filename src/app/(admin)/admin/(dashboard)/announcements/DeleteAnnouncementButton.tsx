@@ -11,10 +11,13 @@ export default function DeleteAnnouncementButton({ id }: { id: string }) {
     if (confirm("Are you sure you want to delete this announcement?")) {
       setIsDeleting(true);
       try {
-        await deleteAnnouncement(id);
+        const res = await deleteAnnouncement(id);
+        if (!res.success) {
+          alert(res.error || "Failed to delete announcement");
+        }
       } catch (error) {
         console.error(error);
-        alert("Failed to delete announcement");
+        alert("An unexpected error occurred while deleting announcement");
       } finally {
         setIsDeleting(false);
       }

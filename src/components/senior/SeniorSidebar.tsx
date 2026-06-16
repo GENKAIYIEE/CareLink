@@ -9,7 +9,6 @@ import {
   Gift, 
   BellRing, 
   Users, 
-  Settings, 
   LogOut,
   ShieldCheck 
 } from 'lucide-react';
@@ -30,7 +29,6 @@ const SIDEBAR_LINKS = [
   { name: 'My Benefits', href: '/senior/benefits', icon: Gift },
   { name: 'Announcements', href: '/senior/announcements', icon: BellRing },
   { name: 'My Delegate', href: '/senior/delegate', icon: Users },
-  { name: 'Settings', href: '/senior/settings', icon: Settings },
 ];
 
 export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
@@ -38,28 +36,38 @@ export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
   const initials = `${senior.firstName[0]}${senior.lastName[0]}`;
 
   return (
-    <aside className="w-[240px] fixed top-0 left-0 h-screen bg-[#006b2c] text-white flex flex-col z-50">
-      {/* Brand */}
-      <div className="h-16 flex items-center gap-3 px-6 border-b border-white/10">
-        <ShieldCheck className="w-6 h-6 text-white" />
-        <span className="font-bold text-lg tracking-wide text-white">CareLink</span>
+    <aside className="w-[260px] fixed top-0 left-0 h-screen bg-gradient-to-b from-green-900 to-green-950 text-white flex flex-col z-50 shadow-2xl border-r border-white/5">
+      {/* Brand Header */}
+      <div className="h-20 flex items-center gap-3 px-8 border-b border-white/10 bg-black/10 backdrop-blur-sm">
+        <div className="bg-white/10 p-2 rounded-xl shadow-inner border border-white/5">
+          <ShieldCheck className="w-6 h-6 text-emerald-300" />
+        </div>
+        <span className="font-extrabold text-xl tracking-wider bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">CareLink</span>
       </div>
 
-      {/* Profile Section */}
-      <div className="p-6 border-b border-white/10 flex flex-col items-center">
-        <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold mb-3 overflow-hidden border-2 border-white/30">
+      {/* User Profile Card */}
+      <div className="px-6 py-8 border-b border-white/5 flex flex-col items-center relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl" />
+        
+        <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-500 to-green-400 flex items-center justify-center text-3xl font-bold mb-4 shadow-xl ring-4 ring-white/10 overflow-hidden relative z-10 group cursor-pointer transition-transform duration-300 hover:scale-105">
           {senior.photoUrl ? (
             <img src={senior.photoUrl} alt="Profile" className="w-full h-full object-cover" />
           ) : (
-            <span>{initials}</span>
+            <span className="text-white drop-shadow-md">{initials}</span>
           )}
         </div>
-        <h3 className="font-semibold text-center">{senior.firstName} {senior.lastName}</h3>
-        <p className="text-sm text-white/70">ID: {senior.oscaId}</p>
+        <h3 className="font-bold text-lg text-center tracking-tight text-white relative z-10">
+          {senior.firstName} {senior.lastName}
+        </h3>
+        <div className="mt-1 px-3 py-1 rounded-full bg-black/20 border border-white/10 flex items-center gap-2 relative z-10">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <p className="text-xs font-semibold text-emerald-100 tracking-wider">ID: {senior.oscaId}</p>
+        </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+      {/* Navigation Links */}
+      <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
         {SIDEBAR_LINKS.map((link) => {
           const Icon = link.icon;
           const isActive = pathname.startsWith(link.href);
@@ -68,28 +76,35 @@ export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
             <Link
               key={link.name}
               href={link.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              className={`group flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 ${
                 isActive 
-                  ? 'bg-[#00873a] text-white font-medium' 
-                  : 'text-white/80 hover:bg-[#00873a]/50 hover:text-white'
+                  ? 'bg-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md border border-white/20 text-white translate-x-1' 
+                  : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span>{link.name}</span>
+              <div className={`transition-transform duration-300 ${isActive ? 'scale-110 text-emerald-300' : 'group-hover:scale-110 group-hover:text-emerald-300'}`}>
+                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span className={`font-medium tracking-wide ${isActive ? 'text-white' : ''}`}>{link.name}</span>
+              
+              {/* Active Indicator Line */}
+              {isActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-emerald-400 rounded-r-full shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-white/10">
+      {/* Logout Action */}
+      <div className="p-6 border-t border-white/10 bg-black/5 mt-auto">
         <form action={logout}>
           <button 
             type="submit"
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+            className="group flex items-center justify-center gap-3 w-full px-4 py-3.5 rounded-xl bg-white/5 text-white/80 font-medium hover:bg-red-500/20 hover:text-red-200 border border-transparent hover:border-red-500/30 transition-all duration-300 shadow-sm"
           >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
+            <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span className="tracking-wide">Secure Logout</span>
           </button>
         </form>
       </div>

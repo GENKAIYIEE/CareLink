@@ -62,9 +62,32 @@ export async function createSession(userId: string, role: 'ADMIN' | 'SENIOR') {
 
 export async function getSession() {
   const cookieStore = await cookies();
+  
+  // 1. Try unified session
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return decrypt(token);
+  if (token) {
+    return decrypt(token);
+  }
+
+  // 2. Fallback to legacy admin token
+  const adminToken = cookieStore.get('admin_token')?.value;
+  if (adminToken) {
+    try {
+      const secret = new TextEncoder().encode(
+        process.env.JWT_SECRET || process.env.SESSION_SECRET || 'fallback_secret_key_that_is_at_least_32_chars_long'
+      );
+      const { payload } = await jwtVerify(adminToken, secret);
+      return {
+        userId: payload.adminId as string,
+        role: "ADMIN" as const,
+        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000) // fake expiry
+      } as SessionPayload;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export async function deleteSession() {
