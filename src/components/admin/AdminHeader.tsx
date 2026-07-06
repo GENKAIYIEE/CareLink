@@ -9,16 +9,26 @@ export default function AdminHeader() {
         {/* Mobile Brand */}
         <span className="md:hidden text-2xl font-bold tracking-tight text-green-900">CareLink</span>
         
-        {/* Search */}
-        <div className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 border-2 border-transparent focus-within:border-green-900 focus-within:bg-white transition-colors">
+        <form 
+          className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 border-2 border-transparent focus-within:border-green-900 focus-within:bg-white transition-colors"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const query = formData.get('q');
+            if (query) {
+              window.location.href = `/admin/seniors?q=${encodeURIComponent(query.toString())}`;
+            }
+          }}
+        >
           <Search className="text-slate-500 mr-2 h-5 w-5" />
           <input 
             suppressHydrationWarning
+            name="q"
             className="bg-transparent border-none focus:ring-0 text-sm text-slate-900 placeholder:text-slate-500 outline-none w-64" 
-            placeholder="Search..." 
+            placeholder="Search for senior citizens..." 
             type="text"
           />
-        </div>
+        </form>
       </div>
 
 

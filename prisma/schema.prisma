@@ -30,6 +30,9 @@ model Senior {
   bloodType        String?
   healthConditions String?
   photoUrl         String?
+  monthlyPictureUrl String?  // For OREC 'Every month Picture' requirement (Base64)
+  lastPictureUpdate DateTime? // Tracking the monthly update
+  face_embedding   Unsupported("vector(128)")?
   passwordHash     String?
   emergencyContactName String?
   emergencyContactNum  String?
@@ -68,6 +71,7 @@ model Claim {
   id          String         @id @default(uuid())
   status      String         @default("Unclaimed")
   claimedAt   DateTime?
+  signature   String?        // For OREC digital signature (Base64)
   seniorId    String
   programId   String
   claimedById String?

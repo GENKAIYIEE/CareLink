@@ -3,6 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
+import { z } from "zod";
+
+const delegateSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  relationship: z.string().min(1, "Relationship is required"),
+  contactNumber: z.string().min(11, "Valid Philippine contact number is required"),
+});
 
 export async function createDelegateAction(formData: FormData) {
   try {
@@ -189,5 +197,149 @@ export async function getDelegateBySeniorId(seniorId: string) {
   } catch (error) {
     console.error("Error fetching delegate:", error);
     return null;
+  }
+}
+
+export async function seniorAddDelegateAction(formData: FormData, photoUrl: string | null) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SENIOR") {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    const data = {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      relationship: formData.get("relationship") as string,
+      contactNumber: formData.get("contactNumber") as string,
+    };
+
+    const parsed = delegateSchema.safeParse(data);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0].message };
+    }
+
+    const senior = await prisma.senior.findUnique({
+      where: { id: session.userId },
+      include: { delegate: true },
+    });
+
+    if (!senior) {
+      return { success: false, error: "Senior not found." };
+    }
+
+    if (senior.delegate) {
+      return { success: false, error: "You already have an active delegate." };
+    }
+
+    const fullName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+
+    const delegate = await prisma.delegate.create({
+      data: {
+        fullName,
+        relationship: parsed.data.relationship,
+        contactNumber: parsed.data.contactNumber,
+        idPhotoUrl: photoUrl,
+      },
+    });
+
+    await prisma.senior.update({
+      where: { id: session.userId },
+      data: { delegateId: delegate.id },
+    });
+
+    revalidatePath("/senior/delegate");
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating delegate:", error);
+    return { success: false, error: "Failed to create delegate." };
+  }
+}
+
+export async function seniorUpdateDelegateAction(formData: FormData, photoUrl: string | null) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SENIOR") {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    const delegateId = formData.get("delegateId") as string;
+    
+    const data = {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      relationship: formData.get("relationship") as string,
+      contactNumber: formData.get("contactNumber") as string,
+    };
+
+    const parsed = delegateSchema.safeParse(data);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0].message };
+    }
+
+    const existingDelegate = await prisma.delegate.findUnique({
+      where: { id: delegateId },
+    });
+
+    if (!existingDelegate) {
+      return { success: false, error: "Delegate not found." };
+    }
+
+    const fullName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+
+    await prisma.delegate.update({
+      where: { id: delegateId },
+      data: {
+        fullName,
+        relationship: parsed.data.relationship,
+        contactNumber: parsed.data.contactNumber,
+        ...(photoUrl && { idPhotoUrl: photoUrl })
+      },
+    });
+
+    revalidatePath("/senior/delegate");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating delegate:", error);
+    return { success: false, error: "Failed to update delegate." };
+  }
+}
+
+export async function seniorRemoveDelegateAction(delegateId: string) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SENIOR") {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    const delegate = await prisma.delegate.findUnique({
+      where: { id: delegateId },
+      include: { seniors: true },
+    });
+
+    if (!delegate) {
+      return { success: false, error: "Delegate not found." };
+    }
+
+    await prisma.senior.update({
+      where: { id: session.userId },
+      data: { delegateId: null },
+    });
+    
+    const linkedSeniorsCount = await prisma.senior.count({
+      where: { delegateId: delegateId }
+    });
+
+    if (linkedSeniorsCount === 0) {
+      await prisma.delegate.delete({
+        where: { id: delegateId },
+      });
+    }
+
+    revalidatePath("/senior/delegate");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting delegate:", error);
+    return { success: false, error: "Failed to remove delegate." };
   }
 }

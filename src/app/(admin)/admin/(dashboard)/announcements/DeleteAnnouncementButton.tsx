@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteAnnouncement } from "@/lib/actions/announcements";
+import { toast } from "sonner";
 
 export default function DeleteAnnouncementButton({ id }: { id: string }) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -13,11 +14,13 @@ export default function DeleteAnnouncementButton({ id }: { id: string }) {
       try {
         const res = await deleteAnnouncement(id);
         if (!res.success) {
-          alert(res.error || "Failed to delete announcement");
+          toast.error("Failed to delete announcement. Please try again.");
+        } else {
+          toast.success("Announcement deleted successfully.");
         }
       } catch (error) {
         console.error(error);
-        alert("An unexpected error occurred while deleting announcement");
+        toast.error("Failed to delete announcement. Please try again.");
       } finally {
         setIsDeleting(false);
       }

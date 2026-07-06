@@ -30,7 +30,14 @@ export async function searchSeniors(query: string) {
         ]
       },
       take: 10,
-      include: {
+      select: {
+        id: true,
+        oscaId: true,
+        firstName: true,
+        lastName: true,
+        photoUrl: true,
+        status: true,
+        barangay: true,
         delegate: true,
       }
     });
@@ -60,6 +67,8 @@ export async function logAssistance(data: {
   seniorId: string;
   programId: string;
   claimedById?: string;
+  verificationMethod?: 'face' | 'manual';
+  signature?: string;
 }) {
   try {
     const program = await prisma.benefitProgram.findUnique({
@@ -94,6 +103,7 @@ export async function logAssistance(data: {
           status: 'Claimed',
           claimedAt: new Date(),
           claimedById: data.claimedById || null,
+          signature: data.signature || null,
         },
         include: { senior: true, program: true, claimedBy: true }
       });
@@ -106,6 +116,7 @@ export async function logAssistance(data: {
           status: 'Claimed',
           claimedAt: new Date(),
           claimedById: data.claimedById || null,
+          signature: data.signature || null,
         },
         include: { senior: true, program: true, claimedBy: true }
       });
@@ -116,7 +127,9 @@ export async function logAssistance(data: {
       await prisma.activityLog.create({
         data: {
           action: "Logged Assistance",
-          details: `Logged claim for ${claim.senior.firstName} ${claim.senior.lastName} under ${claim.program.title}`,
+          details: data.verificationMethod === 'face'
+            ? `Benefit distributed to ${claim.senior.firstName} ${claim.senior.lastName} (OSCA ID: ${claim.senior.oscaId}) — Program: ${claim.program.title}. Identity verified via face recognition.`
+            : `Benefit distributed to ${claim.senior.firstName} ${claim.senior.lastName} (OSCA ID: ${claim.senior.oscaId}) — Program: ${claim.program.title}. Logged via manual search — no face verification performed.`,
           adminId: session.userId,
         },
       });
@@ -132,7 +145,12 @@ export async function logAssistance(data: {
   }
 }
 
-export async function logAssistanceBatch(data: { seniorIds: string[]; programId: string }) {
+export async function logAssistanceBatch(data: {
+  seniorIds: string[];
+  programId: string;
+  seniorVerificationMethods?: Record<string, 'face' | 'manual'>;
+  signature?: string;
+}) {
   try {
     const program = await prisma.benefitProgram.findUnique({
       where: { id: data.programId }
@@ -163,6 +181,7 @@ export async function logAssistanceBatch(data: { seniorIds: string[]; programId:
         data: {
           status: 'Claimed',
           claimedAt: new Date(),
+          signature: data.signature || null,
         }
       });
     }
@@ -176,7 +195,40 @@ export async function logAssistanceBatch(data: { seniorIds: string[]; programId:
           programId: data.programId,
           status: 'Claimed',
           claimedAt: new Date(),
+          signature: data.signature || null,
         }))
+      });
+    }
+
+    // Write audit log with per-senior verification details
+    const session = await getSession();
+    if (session && session.role === 'ADMIN') {
+      // Fetch senior names for the log
+      const seniors = await prisma.senior.findMany({
+        where: { id: { in: data.seniorIds } },
+        select: { id: true, firstName: true, lastName: true, oscaId: true }
+      });
+      
+      let seniorDetails = '';
+      if (seniors.length <= 3) {
+        seniorDetails = seniors.map(s => {
+          const method = data.seniorVerificationMethods?.[s.id];
+          return method === 'face'
+            ? `${s.firstName} ${s.lastName} identified via face recognition.`
+            : `${s.firstName} ${s.lastName} added via manual search — no face verification.`;
+        }).join(' ');
+      } else {
+        const faceCount = seniors.filter(s => data.seniorVerificationMethods?.[s.id] === 'face').length;
+        const manualCount = seniors.length - faceCount;
+        seniorDetails = `${seniors.length} seniors processed (${faceCount} face verified, ${manualCount} manual).`;
+      }
+
+      await prisma.activityLog.create({
+        data: {
+          action: "Logged Assistance",
+          details: `Benefit distributed under ${program.title}. ${seniorDetails}`,
+          adminId: session.userId,
+        },
       });
     }
 
@@ -206,7 +258,16 @@ export async function getSeniorsByBarangay(barangay: string) {
   try {
     return await prisma.senior.findMany({
       where: { barangay },
-      include: { delegate: true }
+      select: {
+        id: true,
+        oscaId: true,
+        firstName: true,
+        lastName: true,
+        status: true,
+        barangay: true,
+        // specifically skipping photoUrl and face_embedding to avoid huge payloads
+        delegate: true,
+      }
     });
   } catch (error) {
     console.error("Error fetching seniors by barangay:", error);
@@ -217,10 +278,19 @@ export async function getRecentTransactions() {
   try {
     const transactions = await prisma.claim.findMany({
       where: { status: 'Claimed' },
-      include: {
-        senior: true,
-        program: true,
-        claimedBy: true,
+      select: {
+        id: true,
+        status: true,
+        claimedAt: true,
+        senior: {
+          select: { firstName: true, lastName: true, oscaId: true }
+        },
+        program: {
+          select: { title: true }
+        },
+        claimedBy: {
+          select: { fullName: true }
+        }
       },
       orderBy: { claimedAt: 'desc' },
       take: 10,
@@ -229,5 +299,26 @@ export async function getRecentTransactions() {
   } catch (error) {
     console.error("Error fetching recent transactions:", error);
     return [];
+  }
+}
+
+export async function getSeniorByOscaId(oscaId: string) {
+  try {
+    const senior = await prisma.senior.findUnique({
+      where: { oscaId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        oscaId: true,
+        barangay: true,
+        photoUrl: true,
+        status: true
+      }
+    });
+    return senior;
+  } catch (error) {
+    console.error("Error fetching senior by OSCA ID:", error);
+    return null;
   }
 }

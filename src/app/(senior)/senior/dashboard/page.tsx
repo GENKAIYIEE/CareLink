@@ -3,6 +3,8 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { Gift, Clock, CalendarHeart, UserCheck, ChevronRight, BellRing } from 'lucide-react';
+import { LiveUpdate } from '@/components/senior/LiveUpdate';
+import { getEffectiveStatus } from '@/lib/utils/status';
 
 export default async function SeniorDashboardPage() {
   const session = await getSession();
@@ -70,7 +72,10 @@ export default async function SeniorDashboardPage() {
     take: 3,
   });
 
-  const currentHour = new Date().getHours();
+  // Get current hour in Philippine Time (PHT)
+  const phtDateStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', hourCycle: 'h23' }).format(new Date());
+  const currentHour = parseInt(phtDateStr, 10);
+  
   let greeting = 'Magandang gabi';
   if (currentHour >= 5 && currentHour < 12) {
     greeting = 'Magandang umaga';
@@ -80,6 +85,7 @@ export default async function SeniorDashboardPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <LiveUpdate interval={30000} />
       {/* Hero Banner */}
       <div className="bg-[#006b2c] rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10">
@@ -99,8 +105,12 @@ export default async function SeniorDashboardPage() {
             <span className="px-3 py-1 bg-white/20 rounded-full text-sm backdrop-blur-sm border border-white/30">
               Barangay {senior.barangay}
             </span>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${senior.status === 'Active' ? 'bg-green-500/20 text-green-100 border-green-500/30' : 'bg-red-500/20 text-red-100 border-red-500/30'}`}>
-              {senior.status}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+              getEffectiveStatus(senior) === 'Active' ? 'bg-green-500/20 text-green-100 border-green-500/30' : 
+              getEffectiveStatus(senior).includes('Inactive') ? 'bg-red-500/20 text-red-100 border-red-500/30' : 
+              'bg-gray-500/20 text-gray-100 border-gray-500/30'
+            }`}>
+              {getEffectiveStatus(senior)}
             </span>
           </div>
         </div>
@@ -194,7 +204,7 @@ export default async function SeniorDashboardPage() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          {claim.claimedById === senior.delegate?.id && claim.claimedBy 
+                          {claim.claimedBy 
                             ? claim.claimedBy.fullName 
                             : 'Self'}
                         </td>

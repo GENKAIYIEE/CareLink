@@ -1,11 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Calendar, FileText, CheckCircle, Clock, Users, MapPin, Tag } from "lucide-react";
+import { ChevronLeft, Calendar, FileText, CheckCircle, Clock, Users, MapPin, Tag, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
+import { LiveUpdate } from "@/components/senior/LiveUpdate";
 
-export default async function ProgramDetailsPage({ params }: { params: { id: string } }) {
+export default async function ProgramDetailsPage({ 
+  params,
+  searchParams,
+}: { 
+  params: { id: string };
+  searchParams: { page?: string };
+}) {
   const resolvedParams = await params;
+  const currentPage = Math.max(1, parseInt(searchParams.page || '1'));
+  const take = 10;
+  const skip = (currentPage - 1) * take;
   const program = await prisma.benefitProgram.findUnique({
     where: { id: resolvedParams.id },
     include: {
@@ -17,7 +27,9 @@ export default async function ProgramDetailsPage({ params }: { params: { id: str
           senior: {
             lastName: 'asc'
           }
-        }
+        },
+        take,
+        skip,
       }
     }
   });
@@ -26,13 +38,18 @@ export default async function ProgramDetailsPage({ params }: { params: { id: str
     notFound();
   }
 
-  // Calculate statistics
-  const totalBeneficiaries = program.claims.length;
-  const totalClaimed = program.claims.filter(c => c.status === "Claimed").length;
+  // Calculate statistics using database aggregation
+  const [totalBeneficiaries, totalClaimed] = await Promise.all([
+    prisma.claim.count({ where: { programId: resolvedParams.id } }),
+    prisma.claim.count({ where: { programId: resolvedParams.id, status: 'Claimed' } })
+  ]);
+  
   const totalUnclaimed = totalBeneficiaries - totalClaimed;
+  const totalPages = Math.ceil(totalBeneficiaries / take);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <LiveUpdate interval={10000} />
       {/* Header & Back */}
       <div className="flex items-center justify-between">
         <Link href="/admin/programs" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-green-700 transition-colors">
@@ -168,6 +185,53 @@ export default async function ProgramDetailsPage({ params }: { params: { id: str
               )}
             </tbody>
           </table>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <Link
+                  href={`/admin/programs/${resolvedParams.id}?${new URLSearchParams({ ...searchParams, page: Math.max(1, currentPage - 1).toString() })}`}
+                  className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage <= 1 ? 'pointer-events-none opacity-50' : ''}`}
+                >
+                  Previous
+                </Link>
+                <Link
+                  href={`/admin/programs/${resolvedParams.id}?${new URLSearchParams({ ...searchParams, page: Math.min(totalPages, currentPage + 1).toString() })}`}
+                  className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                >
+                  Next
+                </Link>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{skip + 1}</span> to <span className="font-medium">{Math.min(skip + take, totalBeneficiaries)}</span> of{' '}
+                    <span className="font-medium">{totalBeneficiaries}</span> beneficiaries
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <Link
+                      href={`/admin/programs/${resolvedParams.id}?${new URLSearchParams({ ...searchParams, page: Math.max(1, currentPage - 1).toString() })}`}
+                      className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage <= 1 ? 'pointer-events-none opacity-50' : ''}`}
+                    >
+                      <span className="sr-only">Previous</span>
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    </Link>
+                    <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Link
+                      href={`/admin/programs/${resolvedParams.id}?${new URLSearchParams({ ...searchParams, page: Math.min(totalPages, currentPage + 1).toString() })}`}
+                      className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                    >
+                      <span className="sr-only">Next</span>
+                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    </Link>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import SettingsForms from './SettingsForms';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Settings - CareLink Admin',
 };
