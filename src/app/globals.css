@@ -26,14 +26,21 @@ body {
 }
 
 @media print {
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
   /* Hide everything on the page */
   body * {
     visibility: hidden;
   }
 
-  /* Show ONLY the ID card and its children */
+  /* Show ONLY the ID card, A4 form, and their children */
   #print-id-card,
-  #print-id-card * {
+  #print-id-card *,
+  #print-a4-form,
+  #print-a4-form * {
     visibility: visible;
   }
 
@@ -58,6 +65,14 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+
+  #print-a4-form {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
   }
 
   /* Header takes fixed height */

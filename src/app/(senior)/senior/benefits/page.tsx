@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import BenefitsTable from '@/components/senior/BenefitsTable';
 import { Gift } from 'lucide-react';
+import { LiveUpdate } from '@/components/senior/LiveUpdate';
 
 export default async function SeniorBenefitsPage() {
   const session = await getSession();
@@ -36,13 +37,14 @@ export default async function SeniorBenefitsPage() {
     distributionDate: claim.program.distributionDate.toISOString(),
     claimedAt: claim.claimedAt ? claim.claimedAt.toISOString() : null,
     status: claim.status,
-    claimant: claim.claimedById === senior.delegate?.id && claim.claimedBy 
+    claimant: claim.claimedBy 
       ? claim.claimedBy.fullName 
       : 'Self'
   }));
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <LiveUpdate interval={30000} />
       <div className="flex items-center gap-3">
         <div className="p-3 bg-green-100 text-[#006b2c] rounded-xl">
           <Gift className="w-6 h-6" />

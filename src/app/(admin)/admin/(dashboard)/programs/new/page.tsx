@@ -3,6 +3,7 @@
 import { createProgram } from '@/lib/actions/programs';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -17,14 +18,15 @@ export default function NewProgramPage() {
       const formData = new FormData(e.currentTarget);
       const res = await createProgram(formData);
       if (res.success) {
+        toast.success("Program created successfully.");
         router.push('/admin/programs');
       } else {
-        alert(res.error || "Failed to create program");
+        toast.error("Failed to create program. Please try again.");
         setIsSubmitting(false);
       }
     } catch (err) {
       console.error(err);
-      alert("An unexpected error occurred");
+      toast.error("Failed to create program. Please try again.");
       setIsSubmitting(false);
     }
   };

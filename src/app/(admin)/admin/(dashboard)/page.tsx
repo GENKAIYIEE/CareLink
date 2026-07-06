@@ -1,10 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { Users, Banknote, CalendarDays, UserPlus, Receipt, UserCheck, AlertTriangle, CalendarPlus } from 'lucide-react';
 import Link from 'next/link';
+import { LiveUpdate } from '@/components/senior/LiveUpdate';
 import DemographicsCharts, {
   type GenderData,
   type AgeBracketData,
 } from '@/components/admin/DemographicsCharts';
+
+export const dynamic = 'force-dynamic';
 
 // ─── Demographics Helpers ─────────────────────────────────────────────────────
 
@@ -81,10 +84,24 @@ function getRelativeTime(date: Date): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminDashboard() {
+  // Fix Timezone Bug: Get start of month in Philippine Time (PHT)
+  const now = new Date();
+  const year = parseInt(new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'Asia/Manila' }).format(now));
+  const month = parseInt(new Intl.DateTimeFormat('en-US', { month: 'numeric', timeZone: 'Asia/Manila' }).format(now));
+  const phtStartOfMonthStr = `${year}-${month.toString().padStart(2, '0')}-01T00:00:00+08:00`;
+  const mtdStart = new Date(phtStartOfMonthStr);
+
   const [totalSeniors, totalPrograms, totalClaims, activeSeniors, recentActivities] = await Promise.all([
     prisma.senior.count(),
-    prisma.benefitProgram.count(),
-    prisma.claim.count(),
+    prisma.benefitProgram.count({
+      where: { distributionDate: { gte: new Date() } }
+    }),
+    prisma.claim.count({
+      where: {
+        status: 'Claimed',
+        claimedAt: { gte: mtdStart }
+      }
+    }),
     prisma.senior.findMany({
       where: { status: 'Active' },
       select: { gender: true, dateOfBirth: true },
@@ -108,6 +125,7 @@ export default async function AdminDashboard() {
 
   return (
     <>
+      <LiveUpdate interval={30000} />
       {/* Dashboard Title */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900">Dashboard Overview</h2>

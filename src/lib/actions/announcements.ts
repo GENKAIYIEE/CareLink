@@ -46,19 +46,26 @@ export async function createAnnouncement(data: {
   }
 }
 
-export async function getAnnouncements() {
+export async function getAnnouncements(page: number = 1, take: number = 10) {
   try {
-    const announcements = await prisma.announcement.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        author: {
-          select: {
-            fullName: true,
+    const skip = (page - 1) * take;
+    const [announcements, totalCount] = await Promise.all([
+      prisma.announcement.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          author: {
+            select: {
+              fullName: true,
+            },
           },
         },
-      },
-    });
-    return { success: true, announcements };
+        take,
+        skip,
+      }),
+      prisma.announcement.count()
+    ]);
+    const totalPages = Math.ceil(totalCount / take);
+    return { success: true, announcements, totalCount, totalPages };
   } catch (error: any) {
     console.error("Error fetching announcements:", error);
     return { success: false, error: error.message };

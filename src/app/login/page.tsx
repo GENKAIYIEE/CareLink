@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import LoginForm from './LoginForm';
 import Image from 'next/image';
+import Link from 'next/link';
 import SuccessBanner from '@/components/auth/SuccessBanner';
 
 
@@ -125,7 +126,7 @@ export default function AdminLoginPage() {
                 Not yet registered? Visit the Municipal Social Welfare Office, Agoo, La Union during office hours <span className="text-white/70">Monday – Friday, 8:00 AM – 5:00 PM</span> to get your CareLink account.
               </p>
               <div className="flex items-center gap-4 text-[11px] text-white/25">
-                <a href="#" className="hover:text-white/50 transition-colors">Terms & Services</a>
+                <Link href="/terms" className="hover:text-white/50 transition-colors">Terms & Services</Link>
                 <span>·</span>
                 <a href="mailto:support@carelink.agoo.ph" className="hover:text-white/50 transition-colors">
                   support@carelink.agoo.ph

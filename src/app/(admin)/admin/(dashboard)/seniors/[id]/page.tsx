@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ChevronLeft, Edit2, User, Phone, MapPin, HeartPulse, Activity } from "lucide-react";
 import { format } from "date-fns";
 import DelegateSection from "./DelegateSection";
+import PrintFormButton from "./PrintFormButton";
+import { getEffectiveStatus } from "@/lib/utils/status";
 
 export default async function SeniorViewPage({ params }: { params: { id: string } }) {
   // Await the params to satisfy the Next.js standard for App Router dynamic segments
@@ -28,21 +30,24 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
   const age = senior.dateOfBirth ? new Date().getFullYear() - new Date(senior.dateOfBirth).getFullYear() : 'N/A';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12 print:max-w-none print:m-0 print:p-0 print:space-y-0 print:block">
       {/* Header & Back */}
       <div className="flex items-center justify-between">
         <Link href="/admin/seniors" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
           <ChevronLeft className="w-4 h-4 mr-1" /> Back to Seniors
         </Link>
-        <Link 
-          href={`/admin/seniors/${senior.id}/edit`}
-          className="inline-flex items-center rounded-md bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
-        >
-          <Edit2 className="w-4 h-4 mr-1.5" /> Edit Profile
-        </Link>
+        <div className="flex items-center gap-2">
+          <PrintFormButton />
+          <Link 
+            href={`/admin/seniors/${senior.id}/edit`}
+            className="inline-flex items-center rounded-md bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors print:hidden"
+          >
+            <Edit2 className="w-4 h-4 mr-1.5" /> Edit Profile
+          </Link>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden print:hidden">
         {/* Profile Header */}
         <div className="bg-indigo-900 px-6 py-8 sm:p-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 relative overflow-hidden">
           {/* Background decorative blob */}
@@ -65,11 +70,12 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
             </p>
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                senior.status === 'Active' ? 'bg-green-400/10 text-green-400 border border-green-400/20' : 
+                getEffectiveStatus(senior) === 'Active' ? 'bg-green-400/10 text-green-400 border border-green-400/20' : 
+                getEffectiveStatus(senior).includes('Inactive') ? 'bg-red-400/10 text-red-400 border border-red-400/20' : 
                 senior.status === 'Bedridden' ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/20' : 
                 'bg-gray-400/10 text-gray-400 border border-gray-400/20'
               }`}>
-                {senior.status}
+                {getEffectiveStatus(senior)}
               </span>
               <span className="inline-flex items-center text-sm text-indigo-100">
                 <MapPin className="w-4 h-4 mr-1" /> {senior.barangay}
@@ -121,6 +127,41 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                 </div>
               </dl>
             </section>
+
+            {/* MONTHLY PROOF OF LIFE SECTION */}
+            <section>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center border-b pb-2">
+                <User className="w-4 h-4 mr-2 text-indigo-600" /> Monthly Proof of Life
+              </h3>
+              <div className="bg-white rounded-lg p-5 border border-gray-200">
+                {senior.lastPictureUpdate ? (
+                  <div className="flex gap-5 items-start">
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-lg overflow-hidden border-2 border-indigo-100 shadow-sm bg-black">
+                      <img 
+                        src={senior.monthlyPictureUrl!} 
+                        alt="Monthly Proof of Life" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 font-medium">Last Verified</p>
+                      <p className="text-gray-900 font-semibold text-lg mt-0.5">
+                        {format(new Date(senior.lastPictureUpdate), 'MMMM d, yyyy')}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        {new Date().getTime() - new Date(senior.lastPictureUpdate).getTime() > 30 * 24 * 60 * 60 * 1000 
+                          ? <span className="text-red-600 font-semibold bg-red-50 px-2 py-1 rounded">Overdue for update</span> 
+                          : <span className="text-green-600 font-semibold bg-green-50 px-2 py-1 rounded">Verified Active</span>}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 bg-gray-50 rounded-md border border-gray-100 border-dashed">
+                    <p className="text-sm text-gray-500 italic">No monthly verification picture uploaded yet.</p>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
 
           {/* Right Column: Emergency & Recent */}
@@ -154,18 +195,29 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
               ) : (
                 <ul className="space-y-3">
                   {senior.claims.map(claim => (
-                    <li key={claim.id} className="flex justify-between items-center text-sm border border-gray-100 rounded-md p-3 hover:bg-gray-50">
-                      <div>
-                        <p className="font-medium text-gray-900">{claim.program.title}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">
-                          {claim.claimedAt ? format(new Date(claim.claimedAt), 'MMM d, yyyy') : 'Pending'}
-                        </p>
+
+                    <li key={claim.id} className="flex flex-col border border-gray-100 rounded-md p-3 hover:bg-gray-50">
+                      <div className="flex justify-between items-center w-full">
+                        <div>
+                          <p className="font-medium text-gray-900">{claim.program.title}</p>
+                          <p className="text-gray-500 text-xs mt-0.5">
+                            {claim.claimedAt ? format(new Date(claim.claimedAt), 'MMM d, yyyy') : 'Pending'}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          claim.status === 'Claimed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {claim.status}
+                        </span>
                       </div>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        claim.status === 'Claimed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {claim.status}
-                      </span>
+                      {claim.signature && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Digital Signature:</p>
+                          <div className="bg-white border-2 border-gray-200 rounded-md p-1 inline-block">
+                            <img src={claim.signature} alt="Claim Signature" className="h-10 w-auto object-contain" />
+                          </div>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -173,6 +225,86 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
             </section>
           </div>
         </div>
+      </div>
+      {/* PRINTABLE A4 FORM (Hidden on screen, visible on print) */}
+      <div id="print-a4-form" className="hidden print:flex print:flex-col print:w-[210mm] print:h-[260mm] print:mx-auto print:bg-white text-black p-8 relative">
+        
+        {/* HEADER */}
+        <div className="text-center mb-6 border-b-2 border-black pb-4">
+          <h1 className="text-2xl font-bold uppercase tracking-widest mb-1">Office of the Senior Citizens Affairs (OSCA)</h1>
+          <h2 className="text-xl font-bold mt-1">Registration & Benefit Form</h2>
+          <p className="mt-2 text-base font-medium">Barangay: {senior.barangay}</p>
+        </div>
+
+        {/* MIDDLE CONTENT - flex-1 pushes the footer down */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex-1 text-base pr-8">
+              
+              {/* ID & Status */}
+              <div className="grid grid-cols-2 gap-4 mb-6 text-base bg-gray-50 p-3 border border-gray-200">
+                <p><strong className="text-gray-800">OSCA ID:</strong> <span className="font-mono text-lg ml-2">{senior.oscaId}</span></p>
+                <p><strong className="text-gray-800">Status:</strong> <span className={`uppercase tracking-wider ml-2 font-bold ${getEffectiveStatus(senior).includes('Inactive') ? 'text-red-600' : 'text-green-600'}`}>{getEffectiveStatus(senior)}</span></p>
+              </div>
+              
+              {/* Personal Info */}
+              <div className="border-b-2 border-gray-400 pb-2 mb-4 mt-6">
+                <h3 className="font-bold uppercase text-gray-800 tracking-wide text-lg">I. Personal Information</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-base">
+                <p><strong>First Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.firstName}</span></p>
+                <p><strong>Last Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.lastName}</span></p>
+                <p><strong>Middle Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.middleName || ''}</span></p>
+                <p><strong>Date of Birth:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.dateOfBirth ? format(new Date(senior.dateOfBirth), 'MMMM d, yyyy') : 'N/A'}</span></p>
+                <p><strong>Age:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{age}</span></p>
+                <p><strong>Gender:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.gender}</span></p>
+                <p className="col-span-2"><strong>Civil Status:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.civilStatus}</span></p>
+                <p className="col-span-2"><strong>Contact Number:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.contactNumber || 'N/A'}</span></p>
+              </div>
+            </div>
+
+            {/* 2x2 Picture */}
+            <div className="border-2 border-black w-36 h-36 flex items-center justify-center bg-gray-50 shrink-0">
+              <span className="text-xs text-gray-400 font-medium tracking-widest">2x2 PICTURE</span>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="border-b-2 border-gray-400 pb-2 mb-4">
+              <h3 className="font-bold uppercase text-gray-800 tracking-wide text-lg">II. Medical & Emergency</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-base">
+              <p><strong>Blood Type:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.bloodType}</span></p>
+              <p><strong>Health Conditions:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.healthConditions || 'None'}</span></p>
+              <p className="col-span-2 mt-2"><strong>Emergency Contact Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.emergencyContactName}</span></p>
+              <p className="col-span-2"><strong>Emergency Contact Number:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.emergencyContactNum}</span></p>
+            </div>
+          </div>
+        </div>
+
+        {/* CLAIMING SIGNATURE SECTION */}
+        <div className="mt-auto border-t-[3px] border-black pt-6">
+          <h3 className="font-bold uppercase text-center mb-4 text-lg tracking-widest">Certification & Verification</h3>
+          <p className="text-sm text-justify mb-8 leading-relaxed italic text-gray-700">
+            "I hereby certify that all information provided above is true and correct to the best of my knowledge. 
+            I fully understand that any false statement or misrepresentation may result in the immediate suspension or cancellation of my OSCA benefits."
+          </p>
+
+          <div className="flex justify-between items-end px-12 pb-8">
+            <div className="flex flex-col items-center">
+              <div className="border-b-2 border-black w-64 mb-3"></div>
+              <span className="text-sm uppercase font-bold tracking-wider">Signature over Printed Name</span>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="border-2 border-black w-28 h-28 mb-3 flex items-center justify-center bg-gray-50">
+                <span className="text-xs text-gray-400 font-medium">THUMBMARK</span>
+              </div>
+              <span className="text-sm uppercase font-bold tracking-wider">Right Thumbmark</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

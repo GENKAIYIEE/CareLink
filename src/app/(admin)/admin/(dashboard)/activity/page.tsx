@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LiveUpdate } from "@/components/senior/LiveUpdate";
+
+export const dynamic = 'force-dynamic';
 
 export default async function ActivityLogPage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -41,6 +44,7 @@ export default async function ActivityLogPage(props: {
 
   return (
     <div className="space-y-6">
+      <LiveUpdate interval={10000} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">System Activity Log</h2>

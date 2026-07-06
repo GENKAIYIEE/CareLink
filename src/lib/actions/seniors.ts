@@ -6,6 +6,19 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 export async function registerSeniorAction(data: any) {
   try {
+    // 0. Anti-Duplication Security Lock
+    const existingSenior = await prisma.senior.findFirst({
+      where: {
+        firstName: { equals: data.firstName, mode: 'insensitive' },
+        lastName: { equals: data.lastName, mode: 'insensitive' },
+        dateOfBirth: new Date(data.dateOfBirth)
+      }
+    });
+
+    if (existingSenior) {
+      return { success: false, error: "A senior citizen with this exact name and date of birth is already registered." };
+    }
+
     // 1. Generate OSCA ID (e.g. 2026-0001)
     const year = new Date().getFullYear();
     const count = await prisma.senior.count();
@@ -61,6 +74,7 @@ export async function registerSeniorAction(data: any) {
     return {
       success: true,
       data: {
+        id: senior.id,
         oscaId: senior.oscaId,
         password: password, // return plaintext password just once for printing
       },
@@ -179,3 +193,75 @@ export async function resetSeniorPasswordAction(id: string, newPassword: string)
     return { success: false, error: "Database error during password reset." };
   }
 }
+
+export async function enrollFaceAction(seniorId: string, descriptorArray: number[]) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') {
+      return { success: false, error: "Unauthorized. Admin access required." };
+    }
+
+    if (!descriptorArray || descriptorArray.length !== 128) {
+      return { success: false, error: "Invalid face descriptor." };
+    }
+
+    const vectorStr = JSON.stringify(descriptorArray);
+    
+    // Use raw SQL because Prisma does not natively support pgvector fields
+    const updatedCount = await prisma.$executeRaw`
+      UPDATE "Senior" 
+      SET face_embedding = ${vectorStr}::vector 
+      WHERE id = ${seniorId}
+    `;
+
+    if (updatedCount === 0) {
+      return { success: false, error: "Senior not found or update failed." };
+    }
+
+    await prisma.activityLog.create({
+      data: {
+        action: "Enrolled Face Data",
+        details: `Successfully enrolled face biometric data for senior ID: ${seniorId}`,
+        adminId: session.userId,
+      },
+    });
+
+    revalidatePath("/admin/seniors");
+    revalidatePath(`/admin/seniors/${seniorId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error saving face embedding:", error);
+    return { success: false, error: "Database error while saving face data." };
+  }
+}
+
+export async function uploadMonthlyPictureAction(seniorId: string, base64Picture: string) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== 'SENIOR' || session.userId !== seniorId) {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    await prisma.senior.update({
+      where: { id: seniorId },
+      data: { 
+        monthlyPictureUrl: base64Picture,
+        lastPictureUpdate: new Date(),
+      },
+    });
+
+    // Aggressively revalidate all paths to fix caching issues
+    revalidatePath("/senior/profile");
+    revalidatePath("/senior/dashboard");
+    revalidatePath("/admin/seniors");
+    revalidatePath(`/admin/seniors/${seniorId}`);
+    revalidatePath("/admin");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error saving monthly picture:", error);
+    return { success: false, error: `Database error: ${error?.message || error}` };
+  }
+}
+

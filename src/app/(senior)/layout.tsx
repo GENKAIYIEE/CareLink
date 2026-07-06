@@ -36,9 +36,11 @@ export default async function SeniorLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <SeniorSidebar senior={senior} />
-      <main className="flex-1 ml-[240px]">
+    <div className="flex min-h-screen bg-gray-50 print:bg-white print:min-h-0 print:block">
+      <div className="print:hidden">
+        <SeniorSidebar senior={senior} />
+      </div>
+      <main className="flex-1 ml-[240px] print:ml-0 print:p-0 print:m-0 print:w-full print:max-w-none print:block">
         {children}
       </main>
     </div>
