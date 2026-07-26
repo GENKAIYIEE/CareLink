@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,6 +16,7 @@ import {
   Megaphone,
 } from 'lucide-react';
 import { logout } from '@/lib/actions/auth';
+import LogoutModal from '@/components/auth/LogoutModal';
 
 const navigation = [
   { name: 'Dashboard',    href: '/admin',               icon: LayoutDashboard },
@@ -28,6 +30,7 @@ const navigation = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col bg-slate-50 border-r-2 border-slate-200 z-50">
@@ -73,17 +76,23 @@ export default function AdminSidebar() {
           Settings
         </Link>
 
-        {/* Logout via server action */}
-        <form action={logout}>
-          <button
-            type="submit"
-            suppressHydrationWarning
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            Logout
-          </button>
-        </form>
+        {/* Logout button triggers confirmation modal */}
+        <button
+          type="button"
+          onClick={() => setShowLogoutModal(true)}
+          suppressHydrationWarning
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
+        >
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+          Logout
+        </button>
+
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={logout}
+          portalName="Admin Portal"
+        />
       </div>
     </aside>
   );

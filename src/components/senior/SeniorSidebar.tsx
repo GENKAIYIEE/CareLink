@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -13,6 +13,7 @@ import {
   ShieldCheck 
 } from 'lucide-react';
 import { logout } from '@/actions/auth/logout';
+import LogoutModal from '@/components/auth/LogoutModal';
 
 interface SeniorSidebarProps {
   senior: {
@@ -33,6 +34,7 @@ const SIDEBAR_LINKS = [
 
 export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
   const pathname = usePathname();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const initials = `${senior.firstName[0]}${senior.lastName[0]}`;
 
   return (
@@ -98,15 +100,22 @@ export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
 
       {/* Logout Action */}
       <div className="p-6 border-t border-white/10 bg-black/5 mt-auto">
-        <form action={logout}>
-          <button 
-            type="submit"
-            className="group flex items-center justify-center gap-3 w-full px-4 py-3.5 rounded-xl bg-white/5 text-white/80 font-medium hover:bg-red-500/20 hover:text-red-200 border border-transparent hover:border-red-500/30 transition-all duration-300 shadow-sm"
-          >
-            <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            <span className="tracking-wide">Secure Logout</span>
-          </button>
-        </form>
+        <button 
+          type="button"
+          onClick={() => setShowLogoutModal(true)}
+          className="group flex items-center justify-center gap-3 w-full px-4 py-3.5 rounded-xl bg-white/5 text-white/80 font-medium hover:bg-red-500/20 hover:text-red-200 border border-transparent hover:border-red-500/30 transition-all duration-300 shadow-sm"
+        >
+          <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+          <span className="tracking-wide">Secure Logout</span>
+        </button>
+
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={logout}
+          portalName="Senior Portal"
+          userName={`${senior.firstName} ${senior.lastName}`}
+        />
       </div>
     </aside>
   );
