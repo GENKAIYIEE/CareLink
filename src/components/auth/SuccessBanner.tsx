@@ -11,9 +11,12 @@ function BannerContent() {
 
   useEffect(() => {
     if (searchParams?.get("registered") === "true") {
-      setShow(true);
-      const timer = setTimeout(() => setShow(false), 5000);
-      return () => clearTimeout(timer);
+      const showTimer = setTimeout(() => setShow(true), 0);
+      const hideTimer = setTimeout(() => setShow(false), 5000);
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
     }
   }, [searchParams]);
 

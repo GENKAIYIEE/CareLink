@@ -19,6 +19,7 @@ import {
 export interface GenderData {
   name: string;
   value: number;
+  color: string;
 }
 
 export interface AgeBracketData {
@@ -26,17 +27,27 @@ export interface AgeBracketData {
   count: number;
 }
 
+export interface AgeData {
+  ageGroup: string;
+  count: number;
+}
+
+export interface DemographicsData {
+  genderData: GenderData[];
+  ageData: AgeData[];
+}
+
 interface DemographicsChartsProps {
   genderData: GenderData[];
   ageBracketData: AgeBracketData[];
 }
 
-// ─── Palette ─────────────────────────────────────────────────────────────────
+// ─── Color Palettes ──────────────────────────────────────────────────────────
 
 const GENDER_COLORS: Record<string, string> = {
-  Male: "#166534",    // green-800
-  Female: "#be185d",  // pink-700
-  Other: "#6d28d9",   // violet-700
+  Female: "#ec4899", // pink-500
+  Male: "#3b82f6", // blue-500
+  Other: "#a855f7", // purple-500
   Unknown: "#94a3b8", // slate-400
 };
 
@@ -44,7 +55,13 @@ const AGE_BAR_COLOR = "#15803d"; // green-700
 
 // ─── Custom Tooltip for Pie ───────────────────────────────────────────────────
 
-const PieTooltip = ({ active, payload }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; payload?: unknown }>;
+  label?: string;
+}
+
+const PieTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const { name, value } = payload[0];
     return (
@@ -61,7 +78,7 @@ const PieTooltip = ({ active, payload }: any) => {
 
 // ─── Custom Tooltip for Bar ───────────────────────────────────────────────────
 
-const BarTooltip = ({ active, payload, label }: any) => {
+const BarTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white border border-slate-200 rounded-lg shadow-md px-3 py-2 text-sm">
@@ -77,11 +94,12 @@ const BarTooltip = ({ active, payload, label }: any) => {
 
 // ─── Custom Legend ────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const renderCustomLegend = (props: any) => {
-  const { payload } = props;
+  const payload: Array<{ value: string; color: string }> = props.payload ?? [];
   return (
     <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
-      {payload.map((entry: any, index: number) => (
+      {payload.map((entry, index: number) => (
         <div key={index} className="flex items-center gap-1.5">
           <span
             className="inline-block h-3 w-3 rounded-full"

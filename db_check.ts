@@ -14,13 +14,12 @@ async function main() {
   console.log("face_embedding column:", cols);
 
   console.log("\nChecking match_face function...");
-  const funcs = await prisma.$queryRaw`
+  const funcs = await prisma.$queryRaw<Array<{ proname: string; prosrc: string }>>`
     SELECT proname, prosrc 
     FROM pg_proc 
     WHERE proname = 'match_face'
   `;
   console.log("match_face function:");
-  // @ts-ignore
   funcs.forEach(f => console.log(f.prosrc));
 }
 main().catch(console.error).finally(() => prisma.$disconnect());

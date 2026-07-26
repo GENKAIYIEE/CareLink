@@ -40,9 +40,9 @@ export async function createAnnouncement(data: {
     revalidatePath("/admin/announcements");
     revalidatePath("/admin"); // Revalidate dashboard
     return { success: true, announcement };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating announcement:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "An error occurred" };
   }
 }
 
@@ -66,9 +66,9 @@ export async function getAnnouncements(page: number = 1, take: number = 10) {
     ]);
     const totalPages = Math.ceil(totalCount / take);
     return { success: true, announcements, totalCount, totalPages };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching announcements:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "An error occurred" };
   }
 }
 
@@ -88,9 +88,9 @@ export async function getPublishedAnnouncements() {
       },
     });
     return { success: true, announcements };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching published announcements:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "An error occurred" };
   }
 }
 
@@ -124,9 +124,9 @@ export async function updateAnnouncement(
     revalidatePath("/admin/announcements");
     revalidatePath("/admin");
     return { success: true, announcement };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating announcement:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "An error occurred" };
   }
 }
 
@@ -152,8 +152,8 @@ export async function deleteAnnouncement(id: string) {
     revalidatePath("/admin/announcements");
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting announcement:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "An error occurred" };
   }
 }

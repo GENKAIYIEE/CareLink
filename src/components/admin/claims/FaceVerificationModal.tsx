@@ -82,6 +82,27 @@ export function FaceVerificationModal({
     };
   }, [hasFaceEnrolled]);
 
+  // ─── Confirm claim (after successful face verification) ───────────────────
+
+  const handleConfirmClaim = useCallback(async (note?: string) => {
+    setIsConfirming(true);
+    try {
+      const res = await markClaimAsClaimed(claimId, note);
+      if (res.success) {
+        toast.success(`Benefit claimed for ${seniorName}.`);
+        onSuccess();
+        onClose();
+      } else {
+        toast.error(res.error || "Failed to mark as claimed.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsConfirming(false);
+    }
+  }, [claimId, seniorName, onSuccess, onClose]);
+
   // ─── Scan handler ──────────────────────────────────────────────────────────
 
   const handleScan = useCallback(async () => {
@@ -143,28 +164,7 @@ export function FaceVerificationModal({
       console.error("Face scan error:", err);
       setState("failed");
     }
-  }, [oscaId]);
-
-  // ─── Confirm claim (after successful face verification) ───────────────────
-
-  const handleConfirmClaim = async (note?: string) => {
-    setIsConfirming(true);
-    try {
-      const res = await markClaimAsClaimed(claimId, note);
-      if (res.success) {
-        toast.success(`Benefit claimed for ${seniorName}.`);
-        onSuccess();
-        onClose();
-      } else {
-        toast.error(res.error || "Failed to mark as claimed.");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("An unexpected error occurred.");
-    } finally {
-      setIsConfirming(false);
-    }
-  };
+  }, [oscaId, handleConfirmClaim]);
 
   // ─── Proceed without verification (no enrollment) ─────────────────────────
 
@@ -411,7 +411,7 @@ export function FaceVerificationModal({
                   </motion.div>
                   <p className="text-base font-bold text-red-700">Face Does Not Match</p>
                   <p className="text-sm text-gray-500">
-                    Please verify the senior's identity manually or try again.
+                    Please verify the senior&apos;s identity manually or try again.
                   </p>
                 </div>
 

@@ -4,7 +4,23 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
-export async function registerSeniorAction(data: any) {
+
+export interface SeniorInputData {
+  firstName: string;
+  lastName: string;
+  middleName?: string | null;
+  dateOfBirth: string | Date;
+  gender?: string | null;
+  civilStatus?: string | null;
+  barangay: string;
+  bloodType?: string | null;
+  healthConditions?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactNum?: string | null;
+  photoUrl?: string | null;
+}
+
+export async function registerSeniorAction(data: SeniorInputData) {
   try {
     // 0. Anti-Duplication Security Lock
     const existingSenior = await prisma.senior.findFirst({
@@ -19,11 +35,18 @@ export async function registerSeniorAction(data: any) {
       return { success: false, error: "A senior citizen with this exact name and date of birth is already registered." };
     }
 
-    // 1. Generate OSCA ID (e.g. 2026-0001)
+    // 1. Generate OSCA ID — use the latest existing ID to avoid race conditions
     const year = new Date().getFullYear();
-    const count = await prisma.senior.count();
-    const nextSeq = String(count + 1).padStart(4, "0");
-    const oscaId = `${year}-${nextSeq}`;
+    const yearPrefix = `${year}-`;
+    const latest = await prisma.senior.findFirst({
+      where: { oscaId: { startsWith: yearPrefix } },
+      orderBy: { oscaId: 'desc' },
+      select: { oscaId: true },
+    });
+    const lastSeq = latest?.oscaId
+      ? parseInt(latest.oscaId.replace(yearPrefix, ''), 10)
+      : 0;
+    const oscaId = `${yearPrefix}${String(lastSeq + 1).padStart(4, '0')}`;
 
     // 2. Generate a random but readable password
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed similar looking characters
@@ -79,13 +102,13 @@ export async function registerSeniorAction(data: any) {
         password: password, // return plaintext password just once for printing
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error registering senior:", error);
     return { success: false, error: "Database error during registration." };
   }
 }
 
-export async function updateSeniorAction(id: string, data: any) {
+export async function updateSeniorAction(id: string, data: SeniorInputData) {
   try {
     const updatedSenior = await prisma.senior.update({
       where: { id },
@@ -119,7 +142,7 @@ export async function updateSeniorAction(id: string, data: any) {
     revalidatePath("/admin");
     
     return { success: true, data: updatedSenior };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating senior:", error);
     return { success: false, error: "Database error during update." };
   }
@@ -152,7 +175,7 @@ export async function deleteSeniorAction(id: string) {
     revalidatePath("/admin/seniors");
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting senior:", error);
     return { success: false, error: "Database error during deletion." };
   }
@@ -188,7 +211,7 @@ export async function resetSeniorPasswordAction(id: string, newPassword: string)
     revalidatePath(`/admin/seniors/${id}`);
     
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error resetting password:", error);
     return { success: false, error: "Database error during password reset." };
   }
@@ -230,23 +253,27 @@ export async function enrollFaceAction(seniorId: string, descriptorArray: number
     revalidatePath(`/admin/seniors/${seniorId}`);
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving face embedding:", error);
     return { success: false, error: "Database error while saving face data." };
   }
 }
 
-export async function uploadMonthlyPictureAction(seniorId: string, base64Picture: string) {
+export async function uploadMonthlyPictureAction(seniorId: string, pictureUrl: string) {
   try {
     const session = await getSession();
     if (!session || session.role !== 'SENIOR' || session.userId !== seniorId) {
       return { success: false, error: "Unauthorized." };
     }
 
+    if (!pictureUrl || !pictureUrl.startsWith('http')) {
+      return { success: false, error: "Invalid picture URL." };
+    }
+
     await prisma.senior.update({
       where: { id: seniorId },
       data: { 
-        monthlyPictureUrl: base64Picture,
+        monthlyPictureUrl: pictureUrl,
         lastPictureUpdate: new Date(),
       },
     });
@@ -259,9 +286,9 @@ export async function uploadMonthlyPictureAction(seniorId: string, base64Picture
     revalidatePath("/admin");
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving monthly picture:", error);
-    return { success: false, error: `Database error: ${error?.message || error}` };
+    return { success: false, error: "Failed to save picture. Please try again." };
   }
 }
 

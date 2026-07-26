@@ -49,8 +49,15 @@ function aggregateDemographics(
     else ageBrackets['Under 60']++; // catch-all: prevents silent data drops
   }
 
+  const GENDER_COLORS: Record<string, string> = {
+    Female: "#ec4899",
+    Male: "#3b82f6",
+    Other: "#a855f7",
+    Unknown: "#94a3b8",
+  };
+
   const genderData: GenderData[] = Object.entries(genderCounts).map(
-    ([name, value]) => ({ name, value })
+    ([name, value]) => ({ name, value, color: GENDER_COLORS[name] ?? GENDER_COLORS.Unknown })
   );
   const ageBracketData: AgeBracketData[] = Object.entries(ageBrackets).map(
     ([bracket, count]) => ({ bracket, count })

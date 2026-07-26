@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, CheckCircle, Loader2, Upload, AlertCircle } from 'lucide-react';
 import { uploadMonthlyPictureAction } from '@/lib/actions/seniors';
+import { uploadMonthlyPictureToStorage } from '@/lib/actions/upload';
 
 interface Props {
   seniorId: string;
@@ -39,14 +40,23 @@ export default function MonthlyPictureUpload({ seniorId, lastPictureUpdate }: Pr
     if (!capturedImage) return;
     setIsUploading(true);
     setError(null);
-    
-    const result = await uploadMonthlyPictureAction(seniorId, capturedImage);
+
+    // Step 1: Upload base64 image to Supabase Storage → get a public URL
+    const storageResult = await uploadMonthlyPictureToStorage(seniorId, capturedImage);
+    if (!storageResult.success || !storageResult.url) {
+      setError(storageResult.error || 'Failed to upload image. Please try again.');
+      setIsUploading(false);
+      return;
+    }
+
+    // Step 2: Save the public URL to the database (not base64)
+    const result = await uploadMonthlyPictureAction(seniorId, storageResult.url);
     if (result.success) {
       setSuccess(true);
       setCapturedImage(null);
       setTimeout(() => setSuccess(false), 5000);
     } else {
-      setError(result.error || "Upload failed.");
+      setError(result.error || 'Upload failed.');
     }
     setIsUploading(false);
   };
@@ -77,7 +87,7 @@ export default function MonthlyPictureUpload({ seniorId, lastPictureUpdate }: Pr
         <div>
           <h3 className="text-lg font-semibold text-amber-900">Monthly Verification Required</h3>
           <p className="text-sm text-amber-700 mt-1">
-            Please capture a recent picture of yourself to verify your active status for this month's benefits.
+            Please capture a recent picture of yourself to verify your active status for this month&apos;s benefits.
           </p>
         </div>
       </div>

@@ -73,14 +73,14 @@ export async function getSession() {
   const adminToken = cookieStore.get('admin_token')?.value;
   if (adminToken) {
     try {
-      const secret = new TextEncoder().encode(
-        process.env.JWT_SECRET || process.env.SESSION_SECRET || 'fallback_secret_key_that_is_at_least_32_chars_long'
-      );
+      const legacyKey = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+      if (!legacyKey) return null;
+      const secret = new TextEncoder().encode(legacyKey);
       const { payload } = await jwtVerify(adminToken, secret);
       return {
         userId: payload.adminId as string,
         role: "ADMIN" as const,
-        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000) // fake expiry
+        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000)
       } as SessionPayload;
     } catch {
       return null;
