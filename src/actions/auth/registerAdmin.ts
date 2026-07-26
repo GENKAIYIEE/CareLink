@@ -30,7 +30,7 @@ export type RegisterAdminResult = {
   };
 };
 
-export async function registerAdmin(prevState: any, formData: FormData): Promise<RegisterAdminResult> {
+export async function registerAdmin(prevState: unknown, formData: FormData): Promise<RegisterAdminResult> {
   const data = Object.fromEntries(formData.entries());
   
   const validatedFields = registerSchema.safeParse(data);

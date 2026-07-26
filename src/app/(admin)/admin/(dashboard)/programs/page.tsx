@@ -82,7 +82,7 @@ export default async function ProgramsPage({
                   {programs.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="py-10 text-center text-sm text-gray-500">
-                        No benefit programs found. Click "Create Program" to add one.
+                        No benefit programs found. Click &quot;Create Program&quot; to add one.
                       </td>
                     </tr>
                   ) : (

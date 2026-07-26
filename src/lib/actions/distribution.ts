@@ -19,7 +19,11 @@ function getManilaDateString(date: Date) {
 // Search seniors for the distribution tracker combobox
 export async function searchSeniors(query: string) {
   if (!query || query.length < 2) return [];
-  
+
+  // Auth guard — only admins may search senior data
+  const session = await getSession();
+  if (!session || session.role !== 'ADMIN') return [];
+
   try {
     const seniors = await prisma.senior.findMany({
       where: {
@@ -71,6 +75,12 @@ export async function logAssistance(data: {
   signature?: string;
 }) {
   try {
+    // ─── Authorization guard ──────────────────────────────────────────────
+    const authSession = await getSession();
+    if (!authSession || authSession.role !== 'ADMIN') {
+      return { success: false, error: 'Unauthorized. Admin access required.' };
+    }
+
     const program = await prisma.benefitProgram.findUnique({
       where: { id: data.programId }
     });
@@ -152,6 +162,12 @@ export async function logAssistanceBatch(data: {
   signature?: string;
 }) {
   try {
+    // ─── Authorization guard ──────────────────────────────────────────────
+    const authSession = await getSession();
+    if (!authSession || authSession.role !== 'ADMIN') {
+      return { success: false, error: 'Unauthorized. Admin access required.' };
+    }
+
     const program = await prisma.benefitProgram.findUnique({
       where: { id: data.programId }
     });

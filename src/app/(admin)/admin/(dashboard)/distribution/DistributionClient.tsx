@@ -108,7 +108,8 @@ export default function DistributionClient({
   }, []);
 
   useEffect(() => {
-    setTransactions(initialTransactions);
+    const timer = setTimeout(() => setTransactions(initialTransactions), 0);
+    return () => clearTimeout(timer);
   }, [initialTransactions]);
 
   // Click-outside to close search dropdown
@@ -143,9 +144,13 @@ export default function DistributionClient({
   useEffect(() => {
     let cancelled = false;
     if (scannerActive) {
-      setScanState('loading_models');
-      setScanError(null);
-      setScannedSenior(null);
+      const timer = setTimeout(() => {
+        if (!cancelled) {
+          setScanState('loading_models');
+          setScanError(null);
+          setScannedSenior(null);
+        }
+      }, 0);
       loadFaceApiModels()
         .then(() => {
           if (!cancelled) setScanState('ready');
@@ -163,9 +168,12 @@ export default function DistributionClient({
         const stream = webcamRef.current.video.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
       }
-      setScanState('idle');
-      setScannedSenior(null);
-      setScanError(null);
+      const timer = setTimeout(() => {
+        setScanState('idle');
+        setScannedSenior(null);
+        setScanError(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
     return () => {
       cancelled = true;
@@ -197,12 +205,12 @@ export default function DistributionClient({
     setIsLoadingBarangay(true);
     const seniorsInBarangay = await getSeniorsByBarangay(barangay);
     const newSeniors = seniorsInBarangay
-      .filter((newSen: any) => !selectedSeniors.some((s) => s.id === newSen.id))
-      .map((sen: any) => ({ ...sen, photoUrl: sen.photoUrl || null }));
+      .filter((newSen) => !selectedSeniors.some((s) => s.id === newSen.id))
+      .map((sen) => ({ ...sen, photoUrl: null }));
     if (newSeniors.length > 0) {
       setSelectedSeniors((prev) => [...prev, ...newSeniors]);
       const methods: Record<string, 'face' | 'manual'> = {};
-      newSeniors.forEach((s: any) => { methods[s.id] = 'manual'; });
+      newSeniors.forEach((s) => { methods[s.id] = 'manual'; });
       setVerificationMethods((prev) => ({ ...prev, ...methods }));
       setNotification({ type: 'success', message: `Added ${newSeniors.length} seniors from ${barangay}.` });
     } else {
@@ -434,7 +442,7 @@ export default function DistributionClient({
                           })}
                         </ul>
                       ) : searchQuery.length >= 2 ? (
-                        <div className="p-4 text-center text-sm text-gray-500">No seniors found matching "{searchQuery}"</div>
+                        <div className="p-4 text-center text-sm text-gray-500">No seniors found matching &quot;{searchQuery}&quot;</div>
                       ) : null}
                     </div>
                   )}

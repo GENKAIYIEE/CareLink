@@ -88,7 +88,7 @@ export default async function SeniorsPage({
                   {seniors.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-sm text-gray-500">
-                        No senior citizens found. Click "Add Senior" to register one.
+                        No senior citizens found. Click &quot;Add Senior&quot; to register one.
                       </td>
                     </tr>
                   ) : (

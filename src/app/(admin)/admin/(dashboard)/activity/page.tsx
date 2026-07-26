@@ -18,7 +18,7 @@ export default async function ActivityLogPage(props: {
   const take = 15;
   const skip = (page - 1) * take;
 
-  let whereClause: any = {};
+  const whereClause: { createdAt?: { gte: Date; lte: Date } } = {};
   if (dateStr) {
     const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
     const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);

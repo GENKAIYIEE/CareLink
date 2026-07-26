@@ -13,7 +13,9 @@ export async function getSeniorSession(): Promise<{
   if (!token) return null;
 
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || process.env.SESSION_SECRET || 'fallback_secret_key_that_is_at_least_32_chars_long');
+    const key = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+    if (!key) return null;
+    const secret = new TextEncoder().encode(key);
     const { payload } = await jwtVerify(token, secret);
     
     if (payload && typeof payload.seniorId === 'string' && typeof payload.oscaId === 'string') {

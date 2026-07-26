@@ -25,7 +25,22 @@ const seniorSchema = z.object({
 
 type SeniorFormData = z.infer<typeof seniorSchema>;
 
-export function EditSeniorForm({ senior }: { senior: any }) {
+export interface EditSeniorProps {
+  id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string | null;
+  dateOfBirth: string | Date;
+  gender?: string | null;
+  civilStatus?: string | null;
+  barangay: string;
+  bloodType?: string | null;
+  healthConditions?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactNum?: string | null;
+}
+
+export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 

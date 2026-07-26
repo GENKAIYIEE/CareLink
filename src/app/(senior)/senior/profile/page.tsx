@@ -211,8 +211,8 @@ export default async function SeniorProfilePage() {
         <div className="mt-auto border-t-[3px] border-black pt-6">
           <h3 className="font-bold uppercase text-center mb-4 text-lg tracking-widest">Certification & Verification</h3>
           <p className="text-sm text-justify mb-8 leading-relaxed italic text-gray-700">
-            "I hereby certify that all information provided above is true and correct to the best of my knowledge. 
-            I fully understand that any false statement or misrepresentation may result in the immediate suspension or cancellation of my OSCA benefits."
+            &quot;I hereby certify that all information provided above is true and correct to the best of my knowledge. 
+            I fully understand that any false statement or misrepresentation may result in the immediate suspension or cancellation of my OSCA benefits.&quot;
           </p>
 
           <div className="flex justify-between items-end px-12 pb-8">

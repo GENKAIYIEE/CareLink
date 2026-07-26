@@ -40,8 +40,8 @@ export async function createProgram(formData: FormData) {
     revalidatePath('/admin/programs');
     revalidatePath('/admin');
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating program:", error);
-    return { success: false, error: error.message || "Failed to create program" };
+    return { success: false, error: error instanceof Error ? error.message : "Failed to create program" };
   }
 }

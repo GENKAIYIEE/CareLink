@@ -136,7 +136,7 @@ export function FaceEnrollmentStep({ seniorId, onComplete }: FaceEnrollmentStepP
           <div>
             <h2 className="text-xl font-bold text-gray-900">Face Enrollment</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Capture the senior's face for identity verification during benefit claiming.
+              Capture the senior&apos;s face for identity verification during benefit claiming.
             </p>
           </div>
         </div>
@@ -233,7 +233,7 @@ export function FaceEnrollmentStep({ seniorId, onComplete }: FaceEnrollmentStepP
           {/* Instructions below webcam */}
           {!skipped && enrollState !== "success" && enrollState !== "loading_models" && (
             <p className="text-sm font-medium text-gray-700">
-              Position the senior's face inside the oval and click Capture
+              Position the senior&apos;s face inside the oval and click Capture
             </p>
           )}
 

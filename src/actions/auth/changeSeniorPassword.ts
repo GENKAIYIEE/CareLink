@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
 
-export async function changeSeniorPassword(prevState: any, formData: FormData) {
+export async function changeSeniorPassword(prevState: unknown, formData: FormData) {
   try {
     const session = await getSession();
     if (!session || session.role !== 'SENIOR') {

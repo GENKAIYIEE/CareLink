@@ -2,7 +2,15 @@
 
 import { UserCheck } from "lucide-react";
 
-export function DelegateManager({ delegate }: { delegate: any | null }) {
+export interface DelegateData {
+  idPhotoUrl?: string | null;
+  fullName: string;
+  relationship: string;
+  contactNumber: string;
+  createdAt: string | Date;
+}
+
+export function DelegateManager({ delegate }: { delegate: DelegateData | null }) {
   if (!delegate) {
     return (
       <div className="p-16 text-center">

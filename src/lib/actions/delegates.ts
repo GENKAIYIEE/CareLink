@@ -285,6 +285,14 @@ export async function seniorUpdateDelegateAction(formData: FormData, photoUrl: s
       return { success: false, error: "Delegate not found." };
     }
 
+    // Ownership check — ensure this delegate belongs to the requesting senior
+    const ownerSenior = await prisma.senior.findFirst({
+      where: { id: session.userId, delegateId: delegateId },
+    });
+    if (!ownerSenior) {
+      return { success: false, error: "Forbidden. You do not own this delegate." };
+    }
+
     const fullName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
 
     await prisma.delegate.update({

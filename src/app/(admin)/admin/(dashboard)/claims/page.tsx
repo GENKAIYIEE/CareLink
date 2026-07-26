@@ -63,7 +63,7 @@ export default async function ClaimsPage({
   const take = 10;
   const skip = (currentPage - 1) * take;
 
-  const whereClause: any = query
+  const whereClause = query
     ? {
         senior: {
           OR: [
