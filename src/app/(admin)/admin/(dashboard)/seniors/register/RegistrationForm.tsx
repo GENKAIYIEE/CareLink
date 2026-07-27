@@ -44,6 +44,7 @@ const seniorSchema = z.object({
   healthConditions: z.string().optional(),
   emergencyContactName: z.string().min(2, "Emergency contact name is required"),
   emergencyContactNum: z.string().min(11, "Valid contact number required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
 });
 
 type SeniorFormData = z.infer<typeof seniorSchema>;
@@ -153,10 +154,10 @@ export function RegistrationForm() {
       gender: "Male",
       civilStatus: "Single",
       barangay: "",
-      bloodType: "Unknown",
       healthConditions: "",
       emergencyContactName: "",
       emergencyContactNum: "",
+      email: "",
     },
   });
 
@@ -300,6 +301,19 @@ export function RegistrationForm() {
                     />
                     {errors.lastName && (
                       <span className="text-red-500 text-xs">{errors.lastName.message}</span>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      {...register("email")}
+                      className="w-full border p-2 rounded-lg"
+                      placeholder="juan.delacruz@example.com"
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">If the senior does not have an email, you may use their delegate's email.</p>
+                    {errors.email && (
+                      <span className="text-red-500 text-xs">{errors.email.message}</span>
                     )}
                   </div>
                   <div className="col-span-2">

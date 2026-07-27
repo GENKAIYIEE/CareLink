@@ -14,8 +14,8 @@ export async function createAnnouncement(data: {
 }) {
   try {
     const session = await getSession();
-    if (!session || !session.userId) {
-      throw new Error("Unauthorized");
+    if (!session || session.role !== 'ADMIN') {
+      return { success: false, error: "Unauthorized. Admin access required." };
     }
 
     const announcement = await prisma.announcement.create({
@@ -79,6 +79,7 @@ export async function getPublishedAnnouncements() {
         status: "Published",
       },
       orderBy: { createdAt: "desc" },
+      take: 50, // never pull unbounded rows — senior feed needs at most 50
       include: {
         author: {
           select: {
@@ -105,21 +106,24 @@ export async function updateAnnouncement(
   }>
 ) {
   try {
+    // Auth guard must happen BEFORE the DB write
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') {
+      return { success: false, error: "Unauthorized. Admin access required." };
+    }
+
     const announcement = await prisma.announcement.update({
       where: { id },
       data,
     });
 
-    const session = await getSession();
-    if (session && session.role === 'ADMIN') {
-      await prisma.activityLog.create({
-        data: {
-          action: "Updated Announcement",
-          details: `Updated announcement ${announcement.title}`,
-          adminId: session.userId,
-        },
-      });
-    }
+    await prisma.activityLog.create({
+      data: {
+        action: "Updated Announcement",
+        details: `Updated announcement ${announcement.title}`,
+        adminId: session.userId,
+      },
+    });
 
     revalidatePath("/admin/announcements");
     revalidatePath("/admin");

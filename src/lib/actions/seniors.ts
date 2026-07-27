@@ -1,9 +1,39 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
+
+// ─── Helper: generate next OSCA ID for this year ──────────────────────────────
+
+async function generateOscaId(): Promise<string> {
+  const year       = new Date().getFullYear();
+  const yearPrefix = `${year}-`;
+
+  // ⚠ Must use MAX with numeric cast — lexicographic ORDER BY DESC breaks after
+  // 9 entries because '2026-0009' > '2026-0010' alphabetically ('9' > '1').
+  const result = await prisma.$queryRaw<{ max_seq: number | null }[]>`
+    SELECT MAX(CAST(SUBSTRING("oscaId" FROM ${yearPrefix.length + 1}) AS INTEGER)) AS max_seq
+    FROM "Senior"
+    WHERE "oscaId" LIKE ${yearPrefix + '%'}
+  `;
+
+  const lastSeq = result[0]?.max_seq ?? 0;
+  return `${yearPrefix}${String(lastSeq + 1).padStart(4, '0')}`;
+}
+
+// ─── Helper: is this a unique constraint violation on oscaId? ─────────────────
+
+function isOscaIdConflict(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002' &&
+    Array.isArray(error.meta?.target) &&
+    (error.meta!.target as string[]).some((f) => f.includes('oscaId'))
+  );
+}
 
 export interface SeniorInputData {
   firstName: string;
@@ -18,6 +48,7 @@ export interface SeniorInputData {
   emergencyContactName?: string | null;
   emergencyContactNum?: string | null;
   photoUrl?: string | null;
+  email?: string | null;
 }
 
 export async function registerSeniorAction(data: SeniorInputData) {
@@ -35,71 +66,82 @@ export async function registerSeniorAction(data: SeniorInputData) {
       return { success: false, error: "A senior citizen with this exact name and date of birth is already registered." };
     }
 
-    // 1. Generate OSCA ID — use the latest existing ID to avoid race conditions
-    const year = new Date().getFullYear();
-    const yearPrefix = `${year}-`;
-    const latest = await prisma.senior.findFirst({
-      where: { oscaId: { startsWith: yearPrefix } },
-      orderBy: { oscaId: 'desc' },
-      select: { oscaId: true },
-    });
-    const lastSeq = latest?.oscaId
-      ? parseInt(latest.oscaId.replace(yearPrefix, ''), 10)
-      : 0;
-    const oscaId = `${yearPrefix}${String(lastSeq + 1).padStart(4, '0')}`;
-
-    // 2. Generate a random but readable password
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed similar looking characters
+    // 1. Generate password (done once — not affected by OSCA ID retry)
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No ambiguous characters
     let password = "AGOO-";
     for (let i = 0; i < 4; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-
-    // 3. Hash the password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 4. Save to database
-    const senior = await prisma.senior.create({
-      data: {
-        oscaId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        middleName: data.middleName || null,
-        dateOfBirth: new Date(data.dateOfBirth),
-        gender: data.gender,
-        civilStatus: data.civilStatus,
-        barangay: data.barangay,
-        bloodType: data.bloodType || null,
-        healthConditions: data.healthConditions || null,
-        emergencyContactName: data.emergencyContactName,
-        emergencyContactNum: data.emergencyContactNum,
-        passwordHash,
-        photoUrl: data.photoUrl || null,
-      },
-    });
+    // 2. Create the senior — retry on OSCA ID collision (race condition guard)
+    //    If two admins register simultaneously, both may read the same "latest"
+    //    and attempt the same oscaId. The DB unique constraint rejects one;
+    //    we catch P2002, re-read the current latest, and try the next slot.
+    const MAX_RETRIES = 5;
+    let senior: Awaited<ReturnType<typeof prisma.senior.create>> | null = null;
 
-    // 5. Log the Activity
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const oscaId = await generateOscaId();
+
+        senior = await prisma.senior.create({
+          data: {
+            oscaId,
+            firstName:            data.firstName,
+            lastName:             data.lastName,
+            middleName:           data.middleName           || null,
+            dateOfBirth:          new Date(data.dateOfBirth),
+            gender:               data.gender,
+            civilStatus:          data.civilStatus,
+            barangay:             data.barangay,
+            bloodType:            data.bloodType            || null,
+            healthConditions:     data.healthConditions     || null,
+            emergencyContactName: data.emergencyContactName,
+            emergencyContactNum:  data.emergencyContactNum,
+            passwordHash,
+            photoUrl:             data.photoUrl             || null,
+            email:                data.email                || null,
+          },
+        });
+
+        break; // Success — exit retry loop
+      } catch (err) {
+        if (isOscaIdConflict(err) && attempt < MAX_RETRIES - 1) {
+          // Concurrent registration grabbed the same ID — re-read and retry
+          console.warn(`[registerSenior] OSCA ID collision on attempt ${attempt + 1}, retrying…`);
+          continue;
+        }
+        throw err; // Unrelated error or max retries exhausted — bubble up
+      }
+    }
+
+    if (!senior) {
+      return { success: false, error: "Could not generate a unique OSCA ID after several attempts. Please try again." };
+    }
+
+    // 3. Log the Activity
     const session = await getSession();
     if (session && session.role === 'ADMIN') {
       await prisma.activityLog.create({
         data: {
-          action: "Registered Senior",
+          action:  "Registered Senior",
           details: `${senior.firstName} ${senior.lastName} (${senior.oscaId})`,
           adminId: session.userId,
         },
       });
     }
 
-    // 6. Revalidate the list
+    // 4. Revalidate the list
     revalidatePath("/admin/seniors");
     revalidatePath("/admin");
 
     return {
       success: true,
       data: {
-        id: senior.id,
-        oscaId: senior.oscaId,
-        password: password, // return plaintext password just once for printing
+        id:       senior.id,
+        oscaId:   senior.oscaId,
+        password: password, // returned once (plaintext) for printing on registration slip
       },
     };
   } catch (error: unknown) {
@@ -124,6 +166,7 @@ export async function updateSeniorAction(id: string, data: SeniorInputData) {
         healthConditions: data.healthConditions || null,
         emergencyContactName: data.emergencyContactName,
         emergencyContactNum: data.emergencyContactNum,
+        email: data.email || null,
       },
     });
     const session = await getSession();

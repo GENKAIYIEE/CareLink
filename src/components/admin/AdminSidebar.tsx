@@ -23,7 +23,7 @@ const navigation = [
   { name: 'Registration', href: '/admin/seniors',       icon: UserCheck },
   { name: 'Benefits',     href: '/admin/distribution',  icon: CreditCard },
   { name: 'Programs',     href: '/admin/programs',      icon: CalendarDays },
-  { name: 'Reports',      href: '/admin/claims',        icon: BarChart2 },
+  { name: 'Reports',      href: '/admin/reports',       icon: BarChart2 },
   { name: 'Announcements',  href: '/admin/announcements', icon: Megaphone },
   { name: 'Activity Log',   href: '/admin/activity',      icon: History },
 ];

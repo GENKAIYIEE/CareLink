@@ -1,13 +1,13 @@
 'use client';
 
-import { createProgram } from '@/lib/actions/programs';
+import { updateProgram } from '@/lib/actions/programs';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export default function NewProgramPage() {
+export default function EditProgramForm({ program }: { program: any }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -16,17 +16,17 @@ export default function NewProgramPage() {
     setIsSubmitting(true);
     try {
       const formData = new FormData(e.currentTarget);
-      const res = await createProgram(formData);
+      const res = await updateProgram(program.id, formData);
       if (res.success) {
-        toast.success("Program created successfully.");
+        toast.success("Program updated successfully.");
         router.push('/admin/programs');
       } else {
-        toast.error("Failed to create program. Please try again.");
+        toast.error(res.error || "Failed to update program.");
         setIsSubmitting(false);
       }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create program. Please try again.");
+      toast.error("Failed to update program. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -38,9 +38,9 @@ export default function NewProgramPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Create New Program</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Edit Program</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Fill in the details below to schedule a new benefit program.
+            Update the details for <strong>{program.title}</strong>
           </p>
         </div>
       </div>
@@ -57,9 +57,9 @@ export default function NewProgramPage() {
                   type="text"
                   name="title"
                   id="title"
+                  defaultValue={program.title}
                   required
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6 px-3"
-                  placeholder="e.g. Q3 Social Pension Distribution"
                 />
               </div>
             </div>
@@ -72,6 +72,7 @@ export default function NewProgramPage() {
                 <select
                   id="type"
                   name="type"
+                  defaultValue={program.type}
                   required
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6 px-3 bg-white"
                 >
@@ -93,6 +94,7 @@ export default function NewProgramPage() {
                   type="date"
                   name="distributionDate"
                   id="distributionDate"
+                  defaultValue={program.formattedDate}
                   required
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6 px-3"
                 />
@@ -108,6 +110,7 @@ export default function NewProgramPage() {
                   type="time"
                   name="startTime"
                   id="startTime"
+                  defaultValue={program.startTime || ''}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6 px-3"
                 />
               </div>
@@ -122,6 +125,7 @@ export default function NewProgramPage() {
                   type="time"
                   name="endTime"
                   id="endTime"
+                  defaultValue={program.endTime || ''}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6 px-3"
                 />
               </div>
@@ -136,8 +140,8 @@ export default function NewProgramPage() {
                   id="description"
                   name="description"
                   rows={4}
+                  defaultValue={program.description || ''}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6 px-3"
-                  placeholder="Additional details about the distribution..."
                 />
               </div>
             </div>
@@ -152,7 +156,7 @@ export default function NewProgramPage() {
               disabled={isSubmitting}
               className="inline-flex justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Saving...' : 'Create Program'}
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>

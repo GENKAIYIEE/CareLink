@@ -11,10 +11,11 @@ export const dynamic = 'force-dynamic';
 export default async function SeniorsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; page?: string };
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const query = searchParams.q || '';
-  const currentPage = parseInt(searchParams.page || '1', 10);
+  const { q, page } = await searchParams;
+  const query = q || '';
+  const currentPage = parseInt(page || '1', 10);
   const itemsPerPage = 10;
   
   const whereClause = query ? {
@@ -135,7 +136,7 @@ export default async function SeniorsPage({
             <div>
               <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                 <Link
-                  href={`/admin/seniors?${new URLSearchParams({ ...searchParams, page: Math.max(1, currentPage - 1).toString() }).toString()}`}
+                  href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.max(1, currentPage - 1).toString() }).toString()}`}
                   className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
                 >
                   <span className="sr-only">Previous</span>
@@ -146,7 +147,7 @@ export default async function SeniorsPage({
                   Page {currentPage} of {totalPages}
                 </div>
                 <Link
-                  href={`/admin/seniors?${new URLSearchParams({ ...searchParams, page: Math.min(totalPages, currentPage + 1).toString() }).toString()}`}
+                  href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.min(totalPages, currentPage + 1).toString() }).toString()}`}
                   className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
                 >
                   <span className="sr-only">Next</span>

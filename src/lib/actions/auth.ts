@@ -1,9 +1,27 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { createSession, deleteSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { comparePasswords } from '@/lib/password';
+import {
+  checkRateLimit,
+  recordFailedAttempt,
+  clearAttempts,
+  getRemainingAttempts,
+} from '@/lib/rateLimit';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+async function getClientIp(): Promise<string> {
+  const headersList = await headers();
+  return (
+    headersList.get('x-forwarded-for')?.split(',')[0].trim() ||
+    headersList.get('x-real-ip') ||
+    'unknown'
+  );
+}
 
 // ─── Unified Login (Smart Routing) ───────────────────────────────────────────
 
@@ -23,6 +41,19 @@ export async function login(
   const identifier = (formData.get('identifier') as string)?.trim();
   const password = formData.get('password') as string;
 
+  // ── Rate Limit Check (first — before any DB access or field validation) ──
+  const ip = await getClientIp();
+  const rateLimitKey = `login:${ip}`;
+  const { allowed, retryAfterMs } = checkRateLimit(rateLimitKey);
+
+  if (!allowed) {
+    const minutesLeft = Math.ceil((retryAfterMs ?? 0) / 60_000);
+    return {
+      error: `Too many failed login attempts. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
+    };
+  }
+
+  // ── Field validation (after rate limit so probes consume attempts) ─────────
   if (!identifier || !password) {
     return { error: 'Please fill in all fields.' };
   }
@@ -35,17 +66,28 @@ export async function login(
   if (admin) {
     const valid = await comparePasswords(password, admin.passwordHash ?? '');
     if (!valid) {
-      return { error: 'Invalid credentials.' };
+      recordFailedAttempt(rateLimitKey);
+      const remaining = getRemainingAttempts(rateLimitKey);
+      return {
+        error: remaining > 0
+          ? `Invalid credentials. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
+          : 'Too many failed login attempts. Please try again in 15 minutes.',
+      };
     }
-    // Admin matched — create session with ADMIN role and redirect
+    // Admin matched — clear any failed attempts and create session
+    clearAttempts(rateLimitKey);
     await createSession(admin.id, 'ADMIN');
     redirect('/admin');
   }
 
-
-
   // ── Neither model matched ─────────────────────────────────────────────────
-  return { error: 'Invalid credentials.' };
+  recordFailedAttempt(rateLimitKey);
+  const remaining = getRemainingAttempts(rateLimitKey);
+  return {
+    error: remaining > 0
+      ? `Invalid credentials. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
+      : 'Too many failed login attempts. Please try again in 15 minutes.',
+  };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -58,3 +100,4 @@ export async function logout() {
   cookieStore.delete('admin_token');
   redirect('/login');
 }
+

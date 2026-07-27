@@ -26,10 +26,9 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Webcam from 'react-webcam';
-import { loadFaceApiModels, getFaceDescriptor } from '@/lib/faceApi';
+import { loadFaceApiModels, getFaceDescriptor, areFaceApiModelsLoaded } from '@/lib/faceApi';
 import { supabase } from '@/lib/supabase';
 import { LiveUpdate } from '@/components/senior/LiveUpdate';
 import SignaturePad from '@/components/admin/SignaturePad';
@@ -105,6 +104,13 @@ export default function DistributionClient({
   // ── Effects ────────────────────────────────────────────────────────────
   useEffect(() => {
     getBarangays().then(setBarangays);
+    // PERF FIX: Pre-load face-api models in the background as soon as the page
+    // mounts. loadFaceApiModels() is idempotent, so this is safe to call even
+    // if the scanner toggle is never activated. It hides the 12+ MB download
+    // latency from the user so the scanner is ready the moment they need it.
+    loadFaceApiModels().catch((err) =>
+      console.warn("Background face model pre-load failed:", err)
+    );
   }, []);
 
   useEffect(() => {
@@ -144,13 +150,18 @@ export default function DistributionClient({
   useEffect(() => {
     let cancelled = false;
     if (scannerActive) {
-      const timer = setTimeout(() => {
-        if (!cancelled) {
-          setScanState('loading_models');
-          setScanError(null);
-          setScannedSenior(null);
-        }
-      }, 0);
+      setScanError(null);
+      setScannedSenior(null);
+
+      // KEY FIX: If models are already loaded in memory (from the background
+      // pre-load on mount), skip the loading UI entirely and go straight to ready.
+      if (areFaceApiModelsLoaded()) {
+        setScanState('ready');
+        return;
+      }
+
+      // Models not yet loaded — show spinner and load now
+      setScanState('loading_models');
       loadFaceApiModels()
         .then(() => {
           if (!cancelled) setScanState('ready');
@@ -168,12 +179,9 @@ export default function DistributionClient({
         const stream = webcamRef.current.video.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
       }
-      const timer = setTimeout(() => {
-        setScanState('idle');
-        setScannedSenior(null);
-        setScanError(null);
-      }, 0);
-      return () => clearTimeout(timer);
+      setScanState('idle');
+      setScannedSenior(null);
+      setScanError(null);
     }
     return () => {
       cancelled = true;
@@ -423,7 +431,7 @@ export default function DistributionClient({
                               >
                                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold overflow-hidden shrink-0 mr-4">
                                   {senior.photoUrl ? (
-                                    <Image src={senior.photoUrl} alt="" width={40} height={40} className="object-cover w-full h-full" />
+                                    <img src={senior.photoUrl} alt="" className="object-cover w-full h-full" />
                                   ) : (
                                     <User className="w-5 h-5" />
                                   )}
@@ -618,11 +626,9 @@ export default function DistributionClient({
                         <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-white border border-green-200 shrink-0 flex items-center justify-center">
                             {scannedSenior.photoUrl ? (
-                              <Image
+                              <img
                                 src={scannedSenior.photoUrl}
                                 alt="Senior"
-                                width={48}
-                                height={48}
                                 className="object-cover w-full h-full"
                               />
                             ) : (

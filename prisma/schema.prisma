@@ -21,6 +21,7 @@ model Admin {
 model Senior {
   id               String    @id @default(uuid())
   oscaId           String    @unique
+  email            String?   @unique
   firstName        String
   middleName       String?
   lastName         String
@@ -62,6 +63,8 @@ model BenefitProgram {
   title            String
   description      String?
   distributionDate DateTime
+  startTime        String?
+  endTime          String?
   type             String
   createdAt        DateTime @default(now())
   claims           Claim[]
