@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { Plus, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
+import DeleteProgramButton from './DeleteProgramButton';
 import { format } from 'date-fns';
 import { SearchBar } from '@/components/admin/SearchBar';
 import { LiveUpdate } from '@/components/senior/LiveUpdate';
@@ -73,8 +74,8 @@ export default async function ProgramsPage({
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Title</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Distribution Date</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">View</span>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 text-right">
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
@@ -97,13 +98,27 @@ export default async function ProgramsPage({
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {format(new Date(program.distributionDate), 'MMM d, yyyy')}
+                          <div>{format(new Date(program.distributionDate), 'MMM d, yyyy')}</div>
+                          {(program.startTime || program.endTime) && (
+                            <div className="text-xs mt-0.5 text-gray-400">
+                              {program.startTime && format(new Date(`2000-01-01T${program.startTime}`), 'h:mm a')}
+                              {program.startTime && program.endTime && ' - '}
+                              {program.endTime && format(new Date(`2000-01-01T${program.endTime}`), 'h:mm a')}
+                            </div>
+                          )}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <Link href={`/admin/programs/${program.id}`} className="inline-flex text-green-600 hover:text-green-800 transition-colors" title="View Program">
-                            <Eye className="h-5 w-5" />
-                            <span className="sr-only">View {program.title}</span>
-                          </Link>
+                          <div className="flex items-center justify-end gap-3">
+                            <Link href={`/admin/programs/${program.id}`} className="text-green-600 hover:text-green-800 transition-colors" title="View Program">
+                              <Eye className="h-5 w-5" />
+                              <span className="sr-only">View {program.title}</span>
+                            </Link>
+                            <Link href={`/admin/programs/${program.id}/edit`} className="text-blue-600 hover:text-blue-800 transition-colors" title="Edit Program">
+                              <Edit className="h-5 w-5" />
+                              <span className="sr-only">Edit {program.title}</span>
+                            </Link>
+                            <DeleteProgramButton id={program.id} title={program.title} />
+                          </div>
                         </td>
                       </tr>
                     ))

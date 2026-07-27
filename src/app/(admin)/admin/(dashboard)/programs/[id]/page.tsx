@@ -74,6 +74,13 @@ export default async function ProgramDetailsPage({
                   <span className="inline-flex items-center">
                     <Calendar className="w-4 h-4 mr-1.5 text-green-300" />
                     Distribution: {format(new Date(program.distributionDate), "MMMM d, yyyy")}
+                    {(program.startTime || program.endTime) && (
+                      <span className="ml-1">
+                        at {program.startTime && format(new Date(`2000-01-01T${program.startTime}`), 'h:mm a')}
+                        {program.startTime && program.endTime && ' - '}
+                        {program.endTime && format(new Date(`2000-01-01T${program.endTime}`), 'h:mm a')}
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>

@@ -56,6 +56,20 @@ export default async function SeniorDashboardPage() {
     },
   });
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const todaysProgramCount = await prisma.benefitProgram.count({
+    where: {
+      distributionDate: {
+        gte: todayStart,
+        lte: todayEnd,
+      },
+    },
+  });
+
   const memberSince = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(senior.createdAt));
 
   const recentClaims = senior.claims.slice(0, 5);
@@ -117,7 +131,16 @@ export default async function SeniorDashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="p-3 bg-rose-100 text-rose-600 rounded-lg">
+            <Gift className="w-6 h-6 animate-pulse" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">Today's Event{todaysProgramCount !== 1 ? 's' : ''}</p>
+            <p className="text-2xl font-bold text-gray-900">{todaysProgramCount}</p>
+          </div>
+        </div>
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
           <div className="p-3 bg-green-100 text-green-600 rounded-lg">
             <Gift className="w-6 h-6" />
@@ -243,6 +266,14 @@ export default async function SeniorDashboardPage() {
                   <p className="text-sm text-green-100 mt-1 flex items-center gap-1.5">
                     <Clock className="w-4 h-4" /> 
                     {new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(upcomingProgram.distributionDate))}
+                    {(upcomingProgram.startTime || upcomingProgram.endTime) && (
+                      <span>
+                        {' at '}
+                        {upcomingProgram.startTime && new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(`2000-01-01T${upcomingProgram.startTime}`))}
+                        {upcomingProgram.startTime && upcomingProgram.endTime && ' - '}
+                        {upcomingProgram.endTime && new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(`2000-01-01T${upcomingProgram.endTime}`))}
+                      </span>
+                    )}
                   </p>
                 </div>
                 {upcomingProgram.description && (

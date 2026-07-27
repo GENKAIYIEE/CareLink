@@ -9,62 +9,58 @@ import DemographicsCharts, {
 
 export const dynamic = 'force-dynamic';
 
-// ─── Demographics Helpers ─────────────────────────────────────────────────────
+// ─── DB-level Demographics Aggregation ───────────────────────────────────────
+//
+// ⚠ Performance: NEVER load all senior rows into Node.js to aggregate.
+// These two queries push aggregation entirely into PostgreSQL — only a handful
+// of aggregate rows are returned regardless of how many seniors are registered.
 
-function calcAge(dob: Date): number {
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const monthDiff = now.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-function aggregateDemographics(
-  seniors: { gender: string | null; dateOfBirth: Date }[]
-): { genderData: GenderData[]; ageBracketData: AgeBracketData[] } {
-  const genderCounts: Record<string, number> = {};
-  // Brackets ordered ascending for a natural left-to-right chart axis.
-  // 'Under 60' acts as a catch-all so no senior is silently dropped.
-  const ageBrackets: Record<string, number> = {
-    'Under 60': 0,
-    '60–69': 0,
-    '70–79': 0,
-    '80–89': 0,
-    '90+': 0,
-  };
-
-  for (const senior of seniors) {
-    // Gender aggregation
-    const gender = senior.gender?.trim() || 'Unknown';
-    genderCounts[gender] = (genderCounts[gender] ?? 0) + 1;
-
-    // Age bracket aggregation
-    const age = calcAge(new Date(senior.dateOfBirth));
-    if (age >= 90) ageBrackets['90+']++;
-    else if (age >= 80) ageBrackets['80–89']++;
-    else if (age >= 70) ageBrackets['70–79']++;
-    else if (age >= 60) ageBrackets['60–69']++;
-    else ageBrackets['Under 60']++; // catch-all: prevents silent data drops
-  }
+async function fetchGenderData(): Promise<GenderData[]> {
+  const rows = await prisma.senior.groupBy({
+    by: ['gender'],
+    where: { status: 'Active' },
+    _count: { _all: true },
+  });
 
   const GENDER_COLORS: Record<string, string> = {
-    Female: "#ec4899",
-    Male: "#3b82f6",
-    Other: "#a855f7",
-    Unknown: "#94a3b8",
+    Female: '#ec4899',
+    Male: '#3b82f6',
+    Other: '#a855f7',
+    Unknown: '#94a3b8',
   };
 
-  const genderData: GenderData[] = Object.entries(genderCounts).map(
-    ([name, value]) => ({ name, value, color: GENDER_COLORS[name] ?? GENDER_COLORS.Unknown })
-  );
-  const ageBracketData: AgeBracketData[] = Object.entries(ageBrackets).map(
-    ([bracket, count]) => ({ bracket, count })
-  );
-
-  return { genderData, ageBracketData };
+  return rows.map((r) => {
+    const name = r.gender?.trim() || 'Unknown';
+    return { name, value: r._count._all, color: GENDER_COLORS[name] ?? GENDER_COLORS.Unknown };
+  });
 }
+
+async function fetchAgeBracketData(): Promise<AgeBracketData[]> {
+  // Age calculation + bracket grouping done entirely in PostgreSQL.
+  // EXTRACT(YEAR FROM AGE(...)) gives the integer age.
+  type Row = { bracket: string; count: bigint };
+  const rows = await prisma.$queryRaw<Row[]>`
+    SELECT
+      CASE
+        WHEN EXTRACT(YEAR FROM AGE("dateOfBirth")) >= 90 THEN '90+'
+        WHEN EXTRACT(YEAR FROM AGE("dateOfBirth")) >= 80 THEN '80–89'
+        WHEN EXTRACT(YEAR FROM AGE("dateOfBirth")) >= 70 THEN '70–79'
+        WHEN EXTRACT(YEAR FROM AGE("dateOfBirth")) >= 60 THEN '60–69'
+        ELSE 'Under 60'
+      END AS bracket,
+      COUNT(*) AS count
+    FROM "Senior"
+    WHERE status = 'Active'
+    GROUP BY bracket
+    ORDER BY bracket
+  `;
+
+  // Ensure all brackets are present (even zeros) in display order
+  const ORDER = ['Under 60', '60–69', '70–79', '80–89', '90+'];
+  const map = new Map(rows.map((r) => [r.bracket, Number(r.count)]));
+  return ORDER.map((bracket) => ({ bracket, count: map.get(bracket) ?? 0 }));
+}
+
 
 function getRelativeTime(date: Date): string {
   const now = new Date();
@@ -93,12 +89,26 @@ function getRelativeTime(date: Date): string {
 export default async function AdminDashboard() {
   // Fix Timezone Bug: Get start of month in Philippine Time (PHT)
   const now = new Date();
-  const year = parseInt(new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'Asia/Manila' }).format(now));
-  const month = parseInt(new Intl.DateTimeFormat('en-US', { month: 'numeric', timeZone: 'Asia/Manila' }).format(now));
-  const phtStartOfMonthStr = `${year}-${month.toString().padStart(2, '0')}-01T00:00:00+08:00`;
+  const parts = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Manila' }).formatToParts(now);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  
+  const phtStartOfMonthStr = `${year}-${month}-01T00:00:00+08:00`;
   const mtdStart = new Date(phtStartOfMonthStr);
 
-  const [totalSeniors, totalPrograms, totalClaims, activeSeniors, recentActivities] = await Promise.all([
+  const todayStart = new Date(`${year}-${month}-${day}T00:00:00+08:00`);
+  const todayEnd = new Date(`${year}-${month}-${day}T23:59:59+08:00`);
+
+  const [
+    totalSeniors,
+    totalPrograms,
+    totalClaims,
+    recentActivities,
+    todaysPrograms,
+    genderData,
+    ageBracketData,
+  ] = await Promise.all([
     prisma.senior.count(),
     prisma.benefitProgram.count({
       where: { distributionDate: { gte: new Date() } }
@@ -108,10 +118,6 @@ export default async function AdminDashboard() {
         status: 'Claimed',
         claimedAt: { gte: mtdStart }
       }
-    }),
-    prisma.senior.findMany({
-      where: { status: 'Active' },
-      select: { gender: true, dateOfBirth: true },
     }),
     prisma.activityLog.findMany({
       take: 3,
@@ -126,13 +132,59 @@ export default async function AdminDashboard() {
         }
       }
     }),
+    prisma.benefitProgram.findMany({
+      where: {
+        distributionDate: { gte: todayStart, lte: todayEnd }
+      }
+    }),
+    fetchGenderData(),
+    fetchAgeBracketData(),
   ]);
 
-  const { genderData, ageBracketData } = aggregateDemographics(activeSeniors);
+  // Time check for "Ongoing" status
+  const timeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: false, timeZone: 'Asia/Manila' });
+  const currentTimeStr = timeFormatter.format(now); // e.g. "14:30"
+  
+  const isOngoing = (program: any) => {
+    if (!program.startTime || !program.endTime) return true; // All-day if no time specified
+    return currentTimeStr >= program.startTime && currentTimeStr <= program.endTime;
+  };
+  
+  const ongoingPrograms = todaysPrograms.filter(isOngoing);
 
   return (
     <>
       <LiveUpdate interval={30000} />
+      
+      {ongoingPrograms.length > 0 && (
+        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <h3 className="font-bold text-green-900 uppercase tracking-wider text-sm">Live KPI: Ongoing Event Today</h3>
+          </div>
+          <div className="space-y-3">
+            {ongoingPrograms.map(p => (
+              <div key={p.id} className="bg-white rounded-lg p-4 border border-green-100 flex items-center justify-between shadow-sm">
+                <div>
+                  <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                  <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-0.5">
+                    <AlertTriangle className="w-4 h-4 text-green-500" />
+                    Monitor distribution actively. 
+                    {p.startTime && p.endTime && ` Scheduled from ${p.startTime} to ${p.endTime}`}
+                  </p>
+                </div>
+                <Link href={`/admin/programs/${p.id}`} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                  Manage Distribution
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Dashboard Title */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900">Dashboard Overview</h2>

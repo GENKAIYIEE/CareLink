@@ -55,9 +55,20 @@ export async function searchSeniors(query: string) {
 // Get active programs
 export async function getActivePrograms() {
   try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
     const programs = await prisma.benefitProgram.findMany({
+      where: {
+        distributionDate: {
+          gte: thirtyDaysAgo,
+          lte: todayEnd,
+        }
+      },
       orderBy: { distributionDate: 'desc' },
-      take: 20,
     });
     return programs;
   } catch (error) {
@@ -259,6 +270,9 @@ export async function logAssistanceBatch(data: {
 
 export async function getBarangays() {
   try {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') return [];
+
     const distinct = await prisma.senior.findMany({
       select: { barangay: true },
       distinct: ['barangay']
@@ -272,6 +286,9 @@ export async function getBarangays() {
 
 export async function getSeniorsByBarangay(barangay: string) {
   try {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') return [];
+
     return await prisma.senior.findMany({
       where: { barangay },
       select: {
