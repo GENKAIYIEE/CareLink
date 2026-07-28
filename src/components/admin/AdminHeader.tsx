@@ -1,6 +1,7 @@
 'use client';
 
 import { Search, Globe, Accessibility, User } from 'lucide-react';
+import NotificationBell from '@/components/shared/NotificationBell';
 
 export default function AdminHeader({ systemName = 'CareLink' }: { systemName?: string }) {
   return (
@@ -33,6 +34,9 @@ export default function AdminHeader({ systemName = 'CareLink' }: { systemName?: 
 
 
 
+      <div className="flex items-center gap-4">
+        <NotificationBell role="ADMIN" />
+      </div>
 
     </header>
   );

@@ -85,6 +85,24 @@ export async function getSession() {
         expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000)
       } as SessionPayload;
     } catch {
+      // Fall through to senior token
+    }
+  }
+
+  // 3. Fallback to legacy senior token
+  const seniorToken = cookieStore.get('senior_token')?.value;
+  if (seniorToken) {
+    try {
+      const legacyKey = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+      if (!legacyKey) return null;
+      const secret = new TextEncoder().encode(legacyKey);
+      const { payload } = await jwtVerify(seniorToken, secret);
+      return {
+        userId: payload.seniorId as string,
+        role: "SENIOR" as const,
+        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000)
+      } as SessionPayload;
+    } catch {
       return null;
     }
   }

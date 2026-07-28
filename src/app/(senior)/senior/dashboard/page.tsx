@@ -137,7 +137,7 @@ export default async function SeniorDashboardPage() {
             <Gift className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Today's Event{todaysProgramCount !== 1 ? 's' : ''}</p>
+            <p className="text-sm text-gray-500 font-medium">Today&apos;s Event{todaysProgramCount !== 1 ? 's' : ''}</p>
             <p className="text-2xl font-bold text-gray-900">{todaysProgramCount}</p>
           </div>
         </div>
