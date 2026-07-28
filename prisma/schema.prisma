@@ -16,6 +16,7 @@ model Admin {
   createdAt    DateTime @default(now())
   announcements Announcement[]
   activityLogs ActivityLog[]
+  notifications Notification[]
 }
 
 model Senior {
@@ -45,6 +46,7 @@ model Senior {
   updatedAt        DateTime  @updatedAt
   claims           Claim[]
   delegate         Delegate? @relation(fields: [delegateId], references: [id])
+  notifications    Notification[]
 }
 
 model Delegate {
@@ -108,4 +110,17 @@ model ActivityLog {
 model SystemSetting {
   key   String @id
   value String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   @default("System") // "System", "Alert", "Message"
+  adminId   String?
+  admin     Admin?   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  seniorId  String?
+  senior    Senior?  @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

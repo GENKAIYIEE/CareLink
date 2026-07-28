@@ -29,7 +29,7 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 // Force a new client if the current one is missing new models
 const prismaInstance = globalForPrisma.prisma;
-export const prisma = (prismaInstance && 'activityLog' in prismaInstance && 'systemSetting' in prismaInstance) 
+export const prisma = (prismaInstance && 'activityLog' in prismaInstance && 'systemSetting' in prismaInstance && 'notification' in prismaInstance) 
   ? prismaInstance 
   : createPrismaClient();
 

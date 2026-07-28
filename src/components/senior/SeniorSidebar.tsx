@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { logout } from '@/actions/auth/logout';
 import LogoutModal from '@/components/auth/LogoutModal';
+import NotificationBell from '@/components/shared/NotificationBell';
 
 interface SeniorSidebarProps {
   senior: {
@@ -57,14 +58,19 @@ export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
           </span>
         </div>
 
-        {/* Small Profile Avatar in Topbar */}
-        <Link href="/senior/profile" className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-green-400 flex items-center justify-center text-sm font-bold shadow-md ring-2 ring-white/10 overflow-hidden">
-          {senior.photoUrl ? (
-            <img src={senior.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-white">{initials}</span>
-          )}
-        </Link>
+        {/* Notification & Small Profile Avatar in Topbar */}
+        <div className="flex items-center gap-3">
+          <div className="md:hidden">
+            <NotificationBell role="SENIOR" />
+          </div>
+          <Link href="/senior/profile" className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-green-400 flex items-center justify-center text-sm font-bold shadow-md ring-2 ring-white/10 overflow-hidden">
+            {senior.photoUrl ? (
+              <img src={senior.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white">{initials}</span>
+            )}
+          </Link>
+        </div>
       </header>
 
       {/* Backdrop Overlay for Mobile */}
@@ -88,13 +94,18 @@ export default function SeniorSidebar({ senior }: SeniorSidebarProps) {
             <span className="font-extrabold text-xl tracking-wider bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">CareLink</span>
           </div>
 
-          <button
-            onClick={() => setIsOpen(false)}
-            className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-white/75 hover:text-white transition-colors"
-            aria-label="Close menu"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="hidden md:block">
+              <NotificationBell role="SENIOR" align="left" />
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-white/75 hover:text-white transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* User Profile Card */}
