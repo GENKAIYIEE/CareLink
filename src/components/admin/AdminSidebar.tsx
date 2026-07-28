@@ -28,7 +28,7 @@ const navigation = [
   { name: 'Activity Log',   href: '/admin/activity',      icon: History },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ systemName = 'CareLink Admin' }: { systemName?: string }) {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -36,7 +36,7 @@ export default function AdminSidebar() {
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col bg-slate-50 border-r-2 border-slate-200 z-50">
       {/* Brand */}
       <div className="px-6 pt-6 pb-4 mb-2">
-        <h1 className="text-xl font-black text-green-900 tracking-tight">CareLink Admin</h1>
+        <h1 className="text-xl font-black text-green-900 tracking-tight">{systemName}</h1>
         <p className="text-slate-500 text-sm mt-0.5">Management Portal</p>
       </div>
 
