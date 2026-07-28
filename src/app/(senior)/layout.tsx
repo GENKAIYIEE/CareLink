@@ -4,6 +4,9 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import SeniorSidebar from '@/components/senior/SeniorSidebar';
 
+// Force all senior portal pages to be server-rendered on demand (same reason as admin layout).
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'CareLink - Senior Portal',
   description: 'Senior Citizen Portal for CareLink',
