@@ -16,7 +16,12 @@ function createPrismaClient() {
     connectionString = connectionString.replace(':6543', ':5432').replace('?pgbouncer=true', '').replace('&pgbouncer=true', '');
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  // ⚠ Serverless connection pool limit:
+  // Vercel runs each request in an isolated serverless function. The default pg.Pool
+  // opens up to 10 connections per instance. During builds, Next.js spawns 11 workers
+  // simultaneously — potentially 110 connections, blowing past Supabase's 15-connection
+  // session-pooler cap. Capping at 1 keeps the total safely under the limit.
+  const adapter = new PrismaPg({ connectionString, max: 1 });
   return new PrismaClient({ adapter });
 }
 
