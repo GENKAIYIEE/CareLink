@@ -12,9 +12,8 @@ export type SessionPayload = {
 
 // ─── Keys ────────────────────────────────────────────────────────────────────
 
-const secretKey = process.env.SESSION_SECRET;
-
 function getEncodedKey() {
+  const secretKey = process.env.SESSION_SECRET;
   if (!secretKey) {
     throw new Error('SESSION_SECRET environment variable is not set.');
   }
@@ -66,7 +65,10 @@ export async function getSession() {
   // 1. Try unified session
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (token) {
-    return decrypt(token);
+    const payload = await decrypt(token);
+    if (payload) {
+      return payload;
+    }
   }
 
   // 2. Fallback to legacy admin token
