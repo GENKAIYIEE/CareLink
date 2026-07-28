@@ -11,7 +11,7 @@ export async function getNotifications(limit?: number) {
   }
 
   try {
-    const where = session.role === 'ADMIN' || session.role === 'SUPERADMIN' 
+    const where = session.role === 'ADMIN'
       ? { adminId: session.userId } 
       : { seniorId: session.userId };
 
@@ -60,7 +60,7 @@ export async function markAllAsRead() {
   if (!session) return { success: false, error: 'Unauthorized' };
 
   try {
-    const where = session.role === 'ADMIN' || session.role === 'SUPERADMIN'
+    const where = session.role === 'ADMIN'
       ? { adminId: session.userId, isRead: false } 
       : { seniorId: session.userId, isRead: false };
 
