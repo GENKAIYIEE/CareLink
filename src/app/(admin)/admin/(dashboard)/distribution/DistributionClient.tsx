@@ -7,6 +7,7 @@ import {
   getBarangays,
   getSeniorsByBarangay,
 } from '@/lib/actions/distribution';
+import { BarangayCombobox } from '@/components/shared/BarangayCombobox';
 import { getSeniorByOscaId } from '@/actions/admin/getSeniorByOscaId';
 import {
   Search,
@@ -357,17 +358,14 @@ export default function DistributionClient({
             {/* Quick Filter by Barangay */}
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-400" />
-              <select
+              <BarangayCombobox
                 value={selectedBarangay}
-                onChange={(e) => handleBarangayFilter(e.target.value)}
+                onChange={handleBarangayFilter}
                 disabled={isLoadingBarangay}
-                className="text-sm border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 py-1.5 px-3 bg-white disabled:opacity-50"
-              >
-                <option value="">Filter by Barangay</option>
-                {barangays.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
+                placeholder="Filter by Barangay"
+                inputClassName="text-sm py-1.5 px-3"
+                className="w-48"
+              />
               {isLoadingBarangay && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />
               )}

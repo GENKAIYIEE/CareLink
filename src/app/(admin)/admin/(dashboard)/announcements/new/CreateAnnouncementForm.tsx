@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAnnouncement } from "@/lib/actions/announcements";
 import { Loader2 } from "lucide-react";
+import { BarangayCombobox } from "@/components/shared/BarangayCombobox";
 
 export default function CreateAnnouncementForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [targetBarangay, setTargetBarangay] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -20,9 +22,10 @@ export default function CreateAnnouncementForm() {
     const category = formData.get("category") as string;
     const status = formData.get("status") as string;
     const content = formData.get("content") as string;
+    const submittedTargetBarangay = targetBarangay || null;
 
     try {
-      const res = await createAnnouncement({ title, category, status, content });
+      const res = await createAnnouncement({ title, category, status, content, targetBarangay: submittedTargetBarangay });
       
       if (res.success) {
         router.push("/admin/announcements");
@@ -92,6 +95,20 @@ export default function CreateAnnouncementForm() {
             <option value="Draft">Draft (Hidden)</option>
             <option value="Published">Published (Visible)</option>
           </select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Target Barangay (Optional)
+          </label>
+          <BarangayCombobox
+            value={targetBarangay}
+            onChange={setTargetBarangay}
+            placeholder="All Barangays (Leave blank for general announcements)"
+          />
+          <p className="mt-1 text-[10px] text-gray-500">
+            If selected, only seniors from this barangay will see this announcement.
+          </p>
         </div>
 
         <div className="sm:col-span-2">

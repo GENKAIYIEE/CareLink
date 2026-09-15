@@ -7,6 +7,8 @@ import * as z from "zod";
 import { ChevronRight, ChevronLeft, Save, CheckCircle2, XCircle } from "lucide-react";
 import { updateSeniorAction } from "@/lib/actions/seniors";
 import { format } from "date-fns";
+import { AGOO_BARANGAYS } from "@/lib/constants";
+import { BarangayCombobox } from "@/components/shared/BarangayCombobox";
 
 // Schema Validation
 const seniorSchema = z.object({
@@ -50,7 +52,7 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
     ? format(new Date(senior.dateOfBirth), "yyyy-MM-dd")
     : "";
 
-  const { register, handleSubmit, trigger, formState: { errors } } = useForm<SeniorFormData>({
+  const { register, handleSubmit, trigger, watch, setValue, formState: { errors } } = useForm<SeniorFormData>({
     resolver: zodResolver(seniorSchema),
     defaultValues: {
       firstName: senior.firstName || "", 
@@ -149,7 +151,12 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium mb-1">Barangay</label>
-                  <input {...register("barangay")} className="w-full border p-2 rounded-lg" placeholder="e.g. San Miguel" />
+                  <input type="hidden" {...register("barangay")} />
+                  <BarangayCombobox
+                    value={watch("barangay")}
+                    onChange={(val) => setValue("barangay", val, { shouldValidate: true })}
+                    error={errors.barangay?.message}
+                  />
                   {errors.barangay && <span className="text-red-500 text-xs">{errors.barangay.message}</span>}
                 </div>
               </div>
