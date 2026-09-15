@@ -49,6 +49,7 @@ export default function AdminLoginForm() {
             text-white text-sm placeholder:text-white/20
             focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40
             transition-all duration-200
+            [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_1000px_#1c2e24_inset]
           "
         />
       </div>
@@ -62,12 +63,6 @@ export default function AdminLoginForm() {
           >
             Password
           </label>
-          <Link
-            href="#"
-            className="text-[11px] text-emerald-400/60 hover:text-emerald-400 transition-colors"
-          >
-            Forgot password?
-          </Link>
         </div>
         <div className="relative">
           <input
@@ -84,12 +79,13 @@ export default function AdminLoginForm() {
               text-white text-sm placeholder:text-white/20
               focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40
               transition-all duration-200
+              [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_1000px_#1c2e24_inset]
             "
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white z-10 transition-colors"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             suppressHydrationWarning
           >

@@ -125,13 +125,6 @@ export default function AdminLoginPage() {
               <p className="text-white/40 text-[13px] text-center leading-relaxed">
                 Not yet registered? Visit the Municipal Social Welfare Office, Agoo, La Union during office hours <span className="text-white/70">Monday – Friday, 8:00 AM – 5:00 PM</span> to get your CareLink account.
               </p>
-              <div className="flex items-center gap-4 text-[11px] text-white/25">
-                <Link href="/terms" className="hover:text-white/50 transition-colors">Terms & Services</Link>
-                <span>·</span>
-                <a href="mailto:support@carelink.agoo.ph" className="hover:text-white/50 transition-colors">
-                  support@carelink.agoo.ph
-                </a>
-              </div>
             </div>
           </div>
         </div>

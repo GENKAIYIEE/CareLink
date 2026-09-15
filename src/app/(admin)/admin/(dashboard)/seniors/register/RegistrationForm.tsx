@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   ChevronLeft,
@@ -20,6 +20,8 @@ import { uploadPhotoAction } from "@/lib/actions/upload";
 import { PhotoEditor, CropState } from "./PhotoEditor";
 import { FaceEnrollmentStep } from "@/components/admin/registration/FaceEnrollmentStep";
 import { supabase } from "@/lib/supabase";
+import { AGOO_BARANGAYS } from "@/lib/constants";
+import { BarangayCombobox } from "@/components/shared/BarangayCombobox";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +145,7 @@ export function RegistrationForm() {
     handleSubmit,
     watch,
     trigger,
+    setValue,
     formState: { errors },
   } = useForm<SeniorFormData>({
     resolver: zodResolver(seniorSchema),
@@ -195,7 +198,7 @@ export function RegistrationForm() {
       const res = await registerSeniorAction(submitData);
 
       if (!res.success || !res.data) {
-        toast.error("Registration failed. Please check the form and try again.");
+        toast.error(res.error || "Registration failed. Please check the form and try again.");
         setIsSubmitting(false);
         return;
       }
@@ -221,6 +224,7 @@ export function RegistrationForm() {
         "gender",
         "civilStatus",
         "barangay",
+        "email",
       ]);
       if (isValid) setStep(2);
     } else if (step === 2) {
@@ -271,15 +275,16 @@ export function RegistrationForm() {
         )}
 
         <div className="flex-1">
-          <form id="registration-form" onSubmit={handleSubmit(handleRegistration)}>
-            {/* ── STEP 1: Personal Information ─────────────────────────── */}
-            {step === 1 && (
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-              >
-                <h2 className="text-xl font-bold mb-4">Personal Information</h2>
+          <form id="registration-form" onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="space-y-8">
+            <AnimatePresence mode="wait">
+              {/* ── STEP 1: Personal Information ─────────────────────────── */}
+              {step === 1 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                >
+                  <h2 className="text-xl font-bold mb-4">Personal Information</h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium mb-1">First Name</label>
@@ -353,10 +358,11 @@ export function RegistrationForm() {
                   </div>
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium mb-1">Barangay</label>
-                    <input
-                      {...register("barangay")}
-                      className="w-full border p-2 rounded-lg"
-                      placeholder="e.g. San Miguel"
+                    <input type="hidden" {...register("barangay")} />
+                    <BarangayCombobox
+                      value={watch("barangay")}
+                      onChange={(val) => setValue("barangay", val, { shouldValidate: true })}
+                      error={errors.barangay?.message}
                     />
                     {errors.barangay && (
                       <span className="text-red-500 text-xs">{errors.barangay.message}</span>
@@ -464,8 +470,10 @@ export function RegistrationForm() {
                 </div>
               </motion.div>
             )}
+            </AnimatePresence>
           </form>
 
+          <AnimatePresence mode="wait">
           {/* ── STEP 3: Face Enrollment ───────────────────────────────── */}
             {step === 3 && successData?.id && (
               <motion.div
@@ -543,6 +551,7 @@ export function RegistrationForm() {
                 </div>
               </motion.div>
             )}
+          </AnimatePresence>
         </div>
 
         {/* Form Controls */}
