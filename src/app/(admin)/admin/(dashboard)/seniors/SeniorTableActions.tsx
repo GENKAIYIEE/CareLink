@@ -69,7 +69,7 @@ export function SeniorTableActions({ seniorId, seniorName }: { seniorId: string;
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-sm overflow-hidden"
+              className="relative bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-sm overflow-hidden whitespace-normal text-left"
             >
               <div className="p-6 text-center">
                 <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4 border border-red-100">

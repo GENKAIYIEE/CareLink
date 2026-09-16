@@ -15,13 +15,11 @@ async function getFaceApi() {
   _faceapi = await import("@vladmandic/face-api");
   
   try {
-    // Explicitly initialize the WebGL backend. If this hangs or fails, we catch it.
-    await _faceapi.tf.setBackend('webgl');
-    await _faceapi.tf.ready();
-  } catch (err) {
-    console.warn("WebGL initialization failed, falling back to CPU:", err);
+    // Explicitly initialize the CPU backend to avoid WebGL/GPU crashes on some laptops.
     await _faceapi.tf.setBackend('cpu');
     await _faceapi.tf.ready();
+  } catch (err) {
+    console.warn("CPU initialization failed:", err);
   }
   
   return _faceapi;
