@@ -21,6 +21,7 @@ export function FaceEnrollmentStep({ seniorId, onComplete }: FaceEnrollmentStepP
   const [capturedThumb, setCapturedThumb] = useState<string | null>(null);
   const [descriptor, setDescriptor] = useState<Float32Array | null>(null);
   const [skipped, setSkipped] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
 
   // Load face-api models on mount
   useEffect(() => {
@@ -164,6 +165,12 @@ export function FaceEnrollmentStep({ seniorId, onComplete }: FaceEnrollmentStepP
                   mirrored={true}
                   screenshotFormat="image/jpeg"
                   videoConstraints={{ width: 640, height: 480, facingMode: "user" }}
+                  onUserMedia={() => setIsCameraReady(true)}
+                  onUserMediaError={(err) => {
+                    console.error("Webcam error:", err);
+                    setEnrollState("error");
+                    setErrorMsg("Camera access denied or unavailable. Please check permissions.");
+                  }}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               )}
@@ -269,11 +276,11 @@ export function FaceEnrollmentStep({ seniorId, onComplete }: FaceEnrollmentStepP
             <button
               type="button"
               onClick={handleCapture}
-              disabled={enrollState !== "ready"}
+              disabled={enrollState !== "ready" || !isCameraReady}
               className="w-full py-3 rounded-lg bg-[#006b2c] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Camera className="w-5 h-5" />
-              {enrollState === "capturing" ? "Scanning..." : "Capture Face"}
+              {enrollState === "capturing" ? "Scanning..." : !isCameraReady ? "Initializing Camera..." : "Capture Face"}
             </button>
           )}
 

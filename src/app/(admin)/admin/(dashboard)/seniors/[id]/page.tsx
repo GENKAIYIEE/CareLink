@@ -227,65 +227,108 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
         </div>
       </div>
       {/* PRINTABLE A4 FORM (Hidden on screen, visible on print) */}
-      <div id="print-a4-form" className="hidden print:flex print:flex-col print:w-[210mm] print:h-[260mm] print:mx-auto print:bg-white text-black p-8 relative">
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page { size: A4; margin: 15mm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      `}} />
+      <div id="print-a4-form" className="hidden print:flex print:flex-col w-full print:bg-white text-black relative">
         
         {/* HEADER */}
-        <div className="text-center mb-6 border-b-2 border-black pb-4">
-          <h1 className="text-2xl font-bold uppercase tracking-widest mb-1">Office of the Senior Citizens Affairs (OSCA)</h1>
-          <h2 className="text-xl font-bold mt-1">Registration & Benefit Form</h2>
-          <p className="mt-2 text-base font-medium">Barangay: {senior.barangay}</p>
+        <div className="text-center mb-2 border-b-[3px] border-black pb-2">
+          <h1 className="text-xl font-bold uppercase tracking-widest mb-1">Office of the Senior Citizens Affairs (OSCA)</h1>
+          <h2 className="text-lg font-bold">Registration & Benefit Form</h2>
+          <p className="mt-1 text-xs font-medium">Barangay: {senior.barangay}</p>
         </div>
 
         {/* MIDDLE CONTENT - flex-1 pushes the footer down */}
         <div className="flex-1 flex flex-col">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex-1 text-base pr-8">
-              
-              {/* ID & Status */}
-              <div className="grid grid-cols-2 gap-4 mb-6 text-base bg-gray-50 p-3 border border-gray-200">
-                <p><strong className="text-gray-800">OSCA ID:</strong> <span className="font-mono text-lg ml-2">{senior.oscaId}</span></p>
-                <p><strong className="text-gray-800">Status:</strong> <span className={`uppercase tracking-wider ml-2 font-bold ${getEffectiveStatus(senior).includes('Inactive') ? 'text-red-600' : 'text-green-600'}`}>{getEffectiveStatus(senior)}</span></p>
-              </div>
-              
-              {/* Personal Info */}
-              <div className="border-b-2 border-gray-400 pb-2 mb-4 mt-6">
-                <h3 className="font-bold uppercase text-gray-800 tracking-wide text-lg">I. Personal Information</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-base">
-                <p><strong>First Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.firstName}</span></p>
-                <p><strong>Last Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.lastName}</span></p>
-                <p><strong>Middle Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.middleName || ''}</span></p>
-                <p><strong>Date of Birth:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.dateOfBirth ? format(new Date(senior.dateOfBirth), 'MMMM d, yyyy') : 'N/A'}</span></p>
-                <p><strong>Age:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{age}</span></p>
-                <p><strong>Gender:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.gender}</span></p>
-                <p className="col-span-2"><strong>Civil Status:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.civilStatus}</span></p>
-                <p className="col-span-2"><strong>Contact Number:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.contactNumber || 'N/A'}</span></p>
+          
+          {/* Top Row: OSCA ID and 2x2 Picture */}
+          <div className="flex items-start justify-between mb-2">
+            {/* ID & Status */}
+            <div className="flex-1 mr-8">
+              <div className="flex flex-col gap-1 text-sm bg-gray-50 p-2 border border-gray-200">
+                <p><strong className="text-gray-800 uppercase">OSCA ID:</strong> <span className="font-mono text-lg ml-2 font-bold">{senior.oscaId}</span></p>
+                <p><strong className="text-gray-800 uppercase">Status:</strong> <span className={`uppercase tracking-wider ml-2 font-bold ${getEffectiveStatus(senior).includes('Inactive') ? 'text-red-600' : 'text-green-600'}`}>{getEffectiveStatus(senior)}</span></p>
               </div>
             </div>
 
             {/* 2x2 Picture */}
             <div className="border-2 border-black w-36 h-36 flex items-center justify-center bg-gray-50 shrink-0">
-              <span className="text-xs text-gray-400 font-medium tracking-widest">2x2 PICTURE</span>
+              <span className="text-xs text-gray-400 font-medium tracking-widest text-center">2x2<br/>PICTURE</span>
+            </div>
+          </div>
+          
+          {/* Personal Info */}
+          <div className="border-b-2 border-gray-400 pb-1 mb-1 mt-2">
+            <h3 className="font-bold uppercase text-gray-800 tracking-wide text-sm">I. Personal Information</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-y-2 gap-x-8 text-xs">
+            <div className="flex items-end">
+              <strong>First Name:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.firstName}</span>
+            </div>
+            <div className="flex items-end">
+              <strong>Last Name:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.lastName}</span>
+            </div>
+            <div className="flex items-end">
+              <strong>Middle Name:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.middleName || ''}</span>
+            </div>
+            <div className="flex items-end">
+              <strong>Date of Birth:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.dateOfBirth ? format(new Date(senior.dateOfBirth), 'MMMM d, yyyy') : 'N/A'}</span>
+            </div>
+            <div className="flex items-end">
+              <strong>Age:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{age}</span>
+            </div>
+            <div className="flex items-end">
+              <strong>Gender:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.gender}</span>
+            </div>
+            <div className="col-span-2 flex items-end">
+              <strong>Civil Status:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.civilStatus}</span>
+            </div>
+            <div className="col-span-2 flex items-end">
+              <strong>Contact Number:</strong> 
+              <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.contactNumber || 'N/A'}</span>
             </div>
           </div>
 
-          <div className="mt-6">
-            <div className="border-b-2 border-gray-400 pb-2 mb-4">
-              <h3 className="font-bold uppercase text-gray-800 tracking-wide text-lg">II. Medical & Emergency</h3>
+          <div className="mt-2">
+            <div className="border-b-2 border-gray-400 pb-1 mb-1">
+              <h3 className="font-bold uppercase text-gray-800 tracking-wide text-sm">II. Medical & Emergency</h3>
             </div>
-            <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-base">
-              <p><strong>Blood Type:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.bloodType}</span></p>
-              <p><strong>Health Conditions:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.healthConditions || 'None'}</span></p>
-              <p className="col-span-2 mt-2"><strong>Emergency Contact Name:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.emergencyContactName}</span></p>
-              <p className="col-span-2"><strong>Emergency Contact Number:</strong> <span className="ml-2 border-b border-gray-300 pb-1 px-2">{senior.emergencyContactNum}</span></p>
+            <div className="grid grid-cols-2 gap-y-2 gap-x-8 text-xs">
+              <div className="flex items-end">
+                <strong>Blood Type:</strong> 
+                <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.bloodType}</span>
+              </div>
+              <div className="flex items-end">
+                <strong>Health Conditions:</strong> 
+                <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.healthConditions || 'None'}</span>
+              </div>
+              <div className="col-span-2 flex items-end mt-1">
+                <strong>Emergency Contact Name:</strong> 
+                <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.emergencyContactName}</span>
+              </div>
+              <div className="col-span-2 flex items-end">
+                <strong>Emergency Contact Number:</strong> 
+                <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.emergencyContactNum}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* CLAIMING SIGNATURE SECTION */}
-        <div className="mt-auto border-t-[3px] border-black pt-6">
-          <h3 className="font-bold uppercase text-center mb-4 text-lg tracking-widest">Certification & Verification</h3>
-          <p className="text-sm text-justify mb-8 leading-relaxed italic text-gray-700">
+        <div className="mt-8 border-t-[3px] border-black pt-2 print:break-inside-avoid">
+          <h3 className="font-bold uppercase text-center mb-1 text-sm tracking-widest">Certification & Verification</h3>
+          <p className="text-xs text-justify mb-2 leading-relaxed italic text-gray-700">
             &quot;I hereby certify that all information provided above is true and correct to the best of my knowledge. 
             I fully understand that any false statement or misrepresentation may result in the immediate suspension or cancellation of my OSCA benefits.&quot;
           </p>
@@ -297,10 +340,10 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
             </div>
             
             <div className="flex flex-col items-center">
-              <div className="border-2 border-black w-28 h-28 mb-3 flex items-center justify-center bg-gray-50">
-                <span className="text-xs text-gray-400 font-medium">THUMBMARK</span>
+              <div className="border-2 border-black w-20 h-20 mb-1 flex items-center justify-center bg-gray-50">
+                <span className="text-[9px] text-gray-400 font-medium">THUMBMARK</span>
               </div>
-              <span className="text-sm uppercase font-bold tracking-wider">Right Thumbmark</span>
+              <span className="text-xs uppercase font-bold tracking-wider">Right Thumbmark</span>
             </div>
           </div>
         </div>

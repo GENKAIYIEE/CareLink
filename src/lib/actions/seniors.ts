@@ -15,7 +15,7 @@ async function generateOscaId(): Promise<string> {
   // ⚠ Must use MAX with numeric cast — lexicographic ORDER BY DESC breaks after
   // 9 entries because '2026-0009' > '2026-0010' alphabetically ('9' > '1').
   const result = await prisma.$queryRaw<{ max_seq: number | null }[]>`
-    SELECT MAX(CAST(SUBSTRING("oscaId" FROM ${yearPrefix.length + 1}) AS INTEGER)) AS max_seq
+    SELECT MAX(CAST(SUBSTRING("oscaId" FROM CAST(${yearPrefix.length + 1} AS INTEGER)) AS INTEGER)) AS max_seq
     FROM "Senior"
     WHERE "oscaId" LIKE ${yearPrefix + '%'}
   `;
