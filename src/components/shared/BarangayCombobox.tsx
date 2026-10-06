@@ -15,15 +15,19 @@ interface BarangayComboboxProps {
   placeholder?: string;
 }
 
-export function BarangayCombobox({ value, onChange, error, className, inputClassName, disabled, placeholder = "e.g. San Miguel" }: BarangayComboboxProps) {
+export function BarangayCombobox({
+  value,
+  onChange,
+  error,
+  className,
+  inputClassName,
+  disabled,
+  placeholder = "Select a barangay",
+}: BarangayComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState(value || "");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setSearch(value || "");
-  }, [value]);
-
+  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -34,64 +38,51 @@ export function BarangayCombobox({ value, onChange, error, className, inputClass
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filtered = AGOO_BARANGAYS.filter((b) =>
-    b.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
     <div className={`relative ${className || ""}`} ref={wrapperRef}>
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          value={search}
-          disabled={disabled}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            onChange(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => !disabled && setIsOpen(true)}
-          className={`w-full border p-2 rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-[#006b2c]/20 ${
-            error ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-[#006b2c]"
-          } ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : ""} ${inputClassName || ""}`}
-          placeholder={placeholder}
-          autoComplete="off"
-        />
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006b2c]/20 transition-all ${
+          error ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-[#006b2c]"
+        } ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : "bg-white hover:bg-gray-50"} ${inputClassName || ""}`}
+      >
+        <span className={`block truncate ${!value ? "text-gray-500" : "text-gray-900 font-medium"}`}>
+          {value || placeholder}
+        </span>
         <ChevronDown
-          className={`w-4 h-4 absolute right-3 text-gray-500 pointer-events-none transition-transform duration-200 ${
+          className={`w-4 h-4 text-gray-500 pointer-events-none transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
-      </div>
+      </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 5 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
+            exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-2 bg-[#1f1f1f] text-white rounded-xl shadow-xl max-h-60 overflow-y-auto border border-[#333] p-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl max-h-[250px] overflow-y-auto border border-gray-100 p-1.5 origin-top [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
-            {filtered.length > 0 ? (
-              filtered.map((brgy) => (
-                <div
-                  key={brgy}
-                  onClick={() => {
-                    setSearch(brgy);
-                    onChange(brgy);
-                    setIsOpen(false);
-                  }}
-                  className="px-3 py-2.5 hover:bg-[#333] cursor-pointer rounded-lg text-sm transition-colors flex items-center"
-                >
-                  {brgy}
-                </div>
-              ))
-            ) : (
-              <div className="px-3 py-4 text-sm text-gray-400 text-center">
-                No barangay found.
+            {AGOO_BARANGAYS.map((brgy) => (
+              <div
+                key={brgy}
+                onClick={() => {
+                  onChange(brgy);
+                  setIsOpen(false);
+                }}
+                className={`px-3 py-2.5 cursor-pointer rounded-lg text-sm transition-colors flex items-center ${
+                  value === brgy
+                    ? "bg-green-50 text-green-700 font-semibold"
+                    : "hover:bg-gray-50 text-gray-700"
+                }`}
+              >
+                {brgy}
               </div>
-            )}
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

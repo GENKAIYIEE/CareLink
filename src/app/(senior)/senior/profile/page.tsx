@@ -139,6 +139,10 @@ export default async function SeniorProfilePage() {
                   <p className="text-red-900 font-medium mt-1">{senior.emergencyContactName || 'Not specified'}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-red-700/70 font-medium">Relationship</p>
+                  <p className="text-red-900 font-medium mt-1">{senior.emergencyContactRel || 'Not specified'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-red-700/70 font-medium">Contact Number</p>
                   <p className="text-red-900 font-medium mt-1">{senior.emergencyContactNum || 'Not specified'}</p>
                 </div>

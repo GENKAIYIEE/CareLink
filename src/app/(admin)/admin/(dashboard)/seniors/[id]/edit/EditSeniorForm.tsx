@@ -23,6 +23,7 @@ const seniorSchema = z.object({
   healthConditions: z.string().optional(),
   emergencyContactName: z.string().min(2, "Emergency contact name is required"),
   emergencyContactNum: z.string().min(11, "Valid contact number required"),
+  emergencyContactRel: z.string().min(1, "Relationship is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
 });
 
@@ -41,6 +42,7 @@ export interface EditSeniorProps {
   healthConditions?: string | null;
   emergencyContactName?: string | null;
   emergencyContactNum?: string | null;
+  emergencyContactRel?: string | null;
   email?: string | null;
 }
 
@@ -66,6 +68,7 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
       healthConditions: senior.healthConditions || "", 
       emergencyContactName: senior.emergencyContactName || "", 
       emergencyContactNum: senior.emergencyContactNum || "",
+      emergencyContactRel: senior.emergencyContactRel || "",
       email: senior.email || ""
     }
   });
@@ -193,8 +196,38 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium mb-1">Contact Number</label>
-                  <input {...register("emergencyContactNum")} className="w-full border p-2 rounded-lg" placeholder="09XX XXX XXXX" />
+                  <input
+                    {...register("emergencyContactNum")}
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/\D/g, "");
+                      let formatted = rawValue;
+                      if (rawValue.length > 4) {
+                        formatted = rawValue.slice(0, 4) + "-" + rawValue.slice(4);
+                      }
+                      if (rawValue.length > 7) {
+                        formatted = formatted.slice(0, 8) + "-" + rawValue.slice(7, 11);
+                      }
+                      e.target.value = formatted;
+                      register("emergencyContactNum").onChange(e);
+                    }}
+                    maxLength={13}
+                    className="w-full border p-2 rounded-lg"
+                    placeholder="09XX-XXX-XXXX"
+                  />
                   {errors.emergencyContactNum && <span className="text-red-500 text-xs">{errors.emergencyContactNum.message}</span>}
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium mb-1">Relationship to Senior</label>
+                  <select {...register("emergencyContactRel")} className="w-full border p-2 rounded-lg bg-white">
+                    <option value="" disabled hidden>Select relationship</option>
+                    <option value="Spouse">Spouse</option>
+                    <option value="Child">Child</option>
+                    <option value="Sibling">Sibling</option>
+                    <option value="Grandchild">Grandchild</option>
+                    <option value="Niece/Nephew">Niece/Nephew</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {errors.emergencyContactRel && <span className="text-red-500 text-xs">{errors.emergencyContactRel.message}</span>}
                 </div>
               </div>
             </div>

@@ -85,7 +85,7 @@ export default function AdminLoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white z-10 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-black hover:text-black/80 z-10 transition-colors"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             suppressHydrationWarning
           >
