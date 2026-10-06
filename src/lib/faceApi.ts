@@ -85,11 +85,34 @@ export async function getFaceDescriptor(
   // Use cached module reference — no repeated dynamic import overhead per scan.
   const faceapi = await getFaceApi();
 
-  const detection = await faceapi
-    .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+  try {
+    const detection = await faceapi
+      .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
 
-  if (!detection) return null;
-  return detection.descriptor;
+    if (!detection) return null;
+    return detection.descriptor;
+  } catch (err) {
+    // WebGL context loss recovery:
+    // The GPU context can be lost mid-inference on some devices (CONTEXT_LOST_WEBGL).
+    // When that happens, automatically fall back to CPU and retry once.
+    console.warn('[FaceAPI] Inference error (possible WebGL context loss). Retrying with CPU backend…', err);
+    try {
+      await faceapi.tf.setBackend('cpu');
+      await faceapi.tf.ready();
+      console.info('[FaceAPI] Switched to CPU backend after WebGL failure. Retrying scan…');
+
+      const detection = await faceapi
+        .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) return null;
+      return detection.descriptor;
+    } catch (retryErr) {
+      console.error('[FaceAPI] CPU retry also failed:', retryErr);
+      return null;
+    }
+  }
 }
