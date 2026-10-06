@@ -177,6 +177,10 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                     <dd className="text-red-900 font-semibold mt-0.5">{senior.emergencyContactName || 'N/A'}</dd>
                   </div>
                   <div>
+                    <dt className="text-red-800/70 font-medium">Relationship</dt>
+                    <dd className="text-red-900 font-semibold mt-0.5">{senior.emergencyContactRel || 'N/A'}</dd>
+                  </div>
+                  <div>
                     <dt className="text-red-800/70 font-medium">Contact Number</dt>
                     <dd className="text-red-900 font-semibold mt-0.5">{senior.emergencyContactNum || 'N/A'}</dd>
                   </div>
@@ -317,8 +321,12 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                 <strong>Emergency Contact Name:</strong> 
                 <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.emergencyContactName}</span>
               </div>
-              <div className="col-span-2 flex items-end">
-                <strong>Emergency Contact Number:</strong> 
+              <div className="flex items-end">
+                <strong>Relationship:</strong> 
+                <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.emergencyContactRel}</span>
+              </div>
+              <div className="flex items-end">
+                <strong>Contact Number:</strong> 
                 <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.emergencyContactNum}</span>
               </div>
             </div>

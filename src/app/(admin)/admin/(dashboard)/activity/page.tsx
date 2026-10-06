@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 import Link from 'next/link';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LiveUpdate } from "@/components/senior/LiveUpdate";
+import BackupRestorePanel from './BackupRestorePanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +44,14 @@ export default async function ActivityLogPage(props: {
 
   const totalPages = Math.ceil(total / take) || 1;
 
+  // Check if current admin is SuperAdmin for backup/restore access
+  const session = await getSession();
+  let isSuperAdmin = false;
+  if (session?.userId) {
+    const currentAdmin = await prisma.admin.findUnique({ where: { id: session.userId } });
+    isSuperAdmin = currentAdmin?.role === 'SuperAdmin';
+  }
+
   return (
     <div className="space-y-6">
       <LiveUpdate interval={10000} />
@@ -53,6 +63,9 @@ export default async function ActivityLogPage(props: {
           </p>
         </div>
       </div>
+
+      {/* Backup & Restore — SuperAdmin only */}
+      {isSuperAdmin && <BackupRestorePanel />}
 
       {/* Filter Section */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">

@@ -25,6 +25,7 @@ import {
   Filter,
   XCircle,
   TriangleAlert,
+  ChevronDown,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -61,7 +62,92 @@ type Transaction = {
 type ScanState = 'idle' | 'loading_models' | 'ready' | 'scanning' | 'success' | 'no_face' | 'no_match' | 'error';
 type RightTab = 'scanner' | 'logs';
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── ProgramDropdown sub-component ──────────────────────────────────────────
+
+function ProgramDropdown({
+  programs,
+  value,
+  onChange,
+  disabled,
+}: {
+  programs: Program[];
+  value: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const selectedProgram = programs.find((p) => p.id === value) ?? null;
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="space-y-4" ref={wrapperRef}>
+      <label className="block text-sm font-semibold text-gray-900">2. Select Assistance / Program</label>
+      <div className="relative">
+        {/* Trigger button */}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          className={`w-full flex items-center justify-between pl-4 pr-4 py-3 rounded-xl border transition-all outline-none font-medium text-sm ${
+            disabled
+              ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
+              : 'bg-white border-gray-300 hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 shadow-sm'
+          }`}
+        >
+          {selectedProgram ? (
+            <span className="truncate">{selectedProgram.title} ({selectedProgram.type})</span>
+          ) : (
+            <span className="text-gray-500">Choose a program...</span>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-500 shrink-0 ml-2 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {/* Dropdown panel */}
+        {isOpen && (
+          <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {programs.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-gray-400">No programs available.</div>
+            ) : (
+              <ul className="max-h-[250px] overflow-y-auto py-1.5 px-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {programs.map((p) => {
+                  const isSelected = p.id === value;
+                  return (
+                    <li
+                      key={p.id}
+                      onClick={() => { onChange(p.id); setIsOpen(false); }}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm ${
+                        isSelected
+                          ? 'bg-green-50 text-green-700 font-semibold'
+                          : 'hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      <span className="truncate">{p.title} ({p.type})</span>
+                      {isSelected && <CheckCircle className="w-4 h-4 text-green-600 ml-auto shrink-0" />}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DistributionClient({
   programs,
@@ -482,28 +568,12 @@ export default function DistributionClient({
               </div>
 
               {/* Step 2: Select Program */}
-              <div className="space-y-4">
-                <label className="block text-sm font-semibold text-gray-900">2. Select Assistance / Program</label>
-                <div className="relative">
-                  <select
-                    required
-                    value={selectedProgramId}
-                    onChange={(e) => setSelectedProgramId(e.target.value)}
-                    disabled={selectedSeniors.length === 0}
-                    className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none shadow-sm bg-gray-50 text-gray-900 disabled:opacity-50 disabled:bg-gray-100 transition-all font-medium"
-                  >
-                    <option value="" disabled>Choose a program...</option>
-                    {programs.map((p) => (
-                      <option key={p.id} value={p.id}>{p.title} ({p.type})</option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
+              <ProgramDropdown
+                programs={programs}
+                value={selectedProgramId}
+                onChange={setSelectedProgramId}
+                disabled={selectedSeniors.length === 0}
+              />
 
               {/* Step 3: Digital Signature */}
               <div className="space-y-4">

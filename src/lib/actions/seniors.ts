@@ -47,6 +47,7 @@ export interface SeniorInputData {
   healthConditions?: string | null;
   emergencyContactName?: string | null;
   emergencyContactNum?: string | null;
+  emergencyContactRel?: string | null;
   photoUrl?: string | null;
   email?: string | null;
 }
@@ -99,6 +100,7 @@ export async function registerSeniorAction(data: SeniorInputData) {
             healthConditions:     data.healthConditions     || null,
             emergencyContactName: data.emergencyContactName,
             emergencyContactNum:  data.emergencyContactNum,
+            emergencyContactRel:  data.emergencyContactRel,
             passwordHash,
             photoUrl:             data.photoUrl             || null,
             email:                data.email                || null,
@@ -166,6 +168,7 @@ export async function updateSeniorAction(id: string, data: SeniorInputData) {
         healthConditions: data.healthConditions || null,
         emergencyContactName: data.emergencyContactName,
         emergencyContactNum: data.emergencyContactNum,
+        emergencyContactRel: data.emergencyContactRel,
         email: data.email || null,
       },
     });

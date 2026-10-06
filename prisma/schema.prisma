@@ -38,6 +38,7 @@ model Senior {
   passwordHash     String?
   emergencyContactName String?
   emergencyContactNum  String?
+  emergencyContactRel  String?
   status           String    @default("Active")
   barangay         String
   contactNumber    String?
