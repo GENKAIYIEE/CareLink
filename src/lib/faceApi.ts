@@ -13,15 +13,23 @@ let _faceapi: any = null;
 async function getFaceApi() {
   if (_faceapi) return _faceapi;
   _faceapi = await import("@vladmandic/face-api");
-  
+
   try {
-    // Explicitly initialize the CPU backend to avoid WebGL/GPU crashes on some laptops.
-    await _faceapi.tf.setBackend('cpu');
+    // Prefer WebGL (GPU) — dramatically faster for face detection.
+    // Falls back to CPU if WebGL is unavailable (old/low-spec laptops, no GPU, etc.)
+    await _faceapi.tf.setBackend('webgl');
     await _faceapi.tf.ready();
-  } catch (err) {
-    console.warn("CPU initialization failed:", err);
+    console.info('[FaceAPI] Using WebGL (GPU) backend — fast mode.');
+  } catch {
+    try {
+      console.warn('[FaceAPI] WebGL unavailable — falling back to CPU backend.');
+      await _faceapi.tf.setBackend('cpu');
+      await _faceapi.tf.ready();
+    } catch (err) {
+      console.error('[FaceAPI] All backends failed:', err);
+    }
   }
-  
+
   return _faceapi;
 }
 
