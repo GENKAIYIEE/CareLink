@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import DelegateSection from "./DelegateSection";
 import PrintFormButton from "./PrintFormButton";
 import { getEffectiveStatus } from "@/lib/utils/status";
+import { FaceEnrollmentSection } from "@/components/senior/FaceEnrollmentSection";
+import { supabaseServer } from "@/lib/supabase-server";
 
 export default async function SeniorViewPage({ params }: { params: { id: string } }) {
   // Await the params to satisfy the Next.js standard for App Router dynamic segments
@@ -24,6 +26,18 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
 
   if (!senior) {
     notFound();
+  }
+
+  let hasFaceEnrolled = false;
+  try {
+    const { data: faceData } = await supabaseServer
+      .from('Senior')
+      .select('face_embedding')
+      .eq('id', senior.id)
+      .single();
+    hasFaceEnrolled = faceData?.face_embedding !== null && faceData?.face_embedding !== undefined;
+  } catch (error) {
+    console.error("Error checking face embedding:", error);
   }
 
   // Calculate age safely
@@ -161,6 +175,13 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                   </div>
                 )}
               </div>
+            </section>
+            
+            <section>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center border-b pb-2">
+                <User className="w-4 h-4 mr-2 text-indigo-600" /> Face Biometrics
+              </h3>
+              <FaceEnrollmentSection seniorId={senior.id} hasFaceEnrolled={hasFaceEnrolled} />
             </section>
           </div>
 

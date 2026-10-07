@@ -31,8 +31,8 @@ export function FaceEnrollmentSection({ seniorId, hasFaceEnrolled: initialEnroll
             )}
             <p className="text-xs text-gray-500 mt-1 max-w-sm">
               {isEnrolled 
-                ? "Your face is enrolled for quick identity verification during benefit claims."
-                : "Register your face data to enable quick and secure verification when claiming benefits."}
+                ? "Face data is enrolled for quick identity verification during benefit claims."
+                : "Register face data to enable quick and secure verification when claiming benefits."}
             </p>
           </div>
         </div>
