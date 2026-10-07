@@ -151,15 +151,16 @@ export async function registerSeniorAction(data: SeniorInputData) {
       },
     };
   } catch (error: unknown) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002' &&
-      Array.isArray(error.meta?.target) &&
-      (error.meta.target as string[]).includes('email')
-    ) {
-      return { success: false, error: "This email address is already registered to another senior citizen." };
+    const errObj = error as any;
+    if (errObj?.code === 'P2002') {
+      const target = errObj?.meta?.target;
+      const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
+      if (targetStr.toLowerCase().includes('email')) {
+        return { success: false, error: "This email address is already registered to another senior citizen." };
+      }
     }
-    const code = (error as { code?: string })?.code ?? 'UNKNOWN';
+    
+    const code = errObj?.code ?? 'UNKNOWN';
     console.error(`[registerSenior] DB error (code=${code}):`, error);
     return { success: false, error: "Database error during registration." };
   }
