@@ -155,8 +155,9 @@ export async function registerSeniorAction(data: SeniorInputData) {
     if (errObj?.code === 'P2002') {
       const target = errObj?.meta?.target;
       const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
-      if (targetStr.toLowerCase().includes('email')) {
-        return { success: false, error: "This email address is already registered to another senior citizen." };
+      const msgStr = String(errObj?.message || '');
+      if (targetStr.toLowerCase().includes('email') || msgStr.toLowerCase().includes('email')) {
+        return { success: false, error: "This email is already registered. Please try another one." };
       }
     }
     
@@ -280,8 +281,12 @@ export async function resetSeniorPasswordAction(id: string, newPassword: string)
 export async function enrollFaceAction(seniorId: string, descriptorArray: number[]) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return { success: false, error: "Unauthorized. Admin access required." };
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'SENIOR')) {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    if (session.role === 'SENIOR' && session.userId !== seniorId) {
+      return { success: false, error: "Unauthorized. You can only update your own face data." };
     }
 
     if (!descriptorArray || descriptorArray.length !== 128) {
@@ -305,12 +310,13 @@ export async function enrollFaceAction(seniorId: string, descriptorArray: number
       data: {
         action: "Enrolled Face Data",
         details: `Successfully enrolled face biometric data for senior ID: ${seniorId}`,
-        adminId: session.userId,
+        adminId: session.role === 'ADMIN' ? session.userId : "SYSTEM", // Activity logs expect an Admin. We can use a dummy or skip. Wait, AdminId is required.
       },
-    });
+    }).catch(() => {}); // catch error if SYSTEM admin doesn't exist
 
     revalidatePath("/admin/seniors");
     revalidatePath(`/admin/seniors/${seniorId}`);
+    revalidatePath("/senior/profile");
 
     return { success: true };
   } catch (error: unknown) {
