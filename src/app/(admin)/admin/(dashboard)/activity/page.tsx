@@ -22,9 +22,11 @@ export default async function ActivityLogPage(props: {
 
   const whereClause: { createdAt?: { gte: Date; lte: Date } } = {};
   if (dateStr) {
-    const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
-    const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
-    // Adjusting for timezone if needed, but standard GMT works for now
+    // TIMEZONE FIX: Vercel servers run on UTC. We must interpret the date filter
+    // as Philippine Standard Time (PST = UTC+8) boundaries, not UTC midnight.
+    // Without this, filtering by "Oct 7" on Vercel would show Oct 6 PHT records.
+    const startOfDay = new Date(`${dateStr}T00:00:00.000+08:00`);
+    const endOfDay   = new Date(`${dateStr}T23:59:59.999+08:00`);
     whereClause.createdAt = {
       gte: startOfDay,
       lte: endOfDay,
@@ -117,7 +119,8 @@ export default async function ActivityLogPage(props: {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       {new Intl.DateTimeFormat('en-US', {
                         month: 'short', day: 'numeric', year: 'numeric',
-                        hour: 'numeric', minute: '2-digit', hour12: true
+                        hour: 'numeric', minute: '2-digit', hour12: true,
+                        timeZone: 'Asia/Manila'
                       }).format(new Date(log.createdAt))}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

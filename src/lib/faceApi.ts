@@ -10,23 +10,40 @@ let loadingPromise: Promise<void> | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _faceapi: any = null;
 
+// ─── Tuned detector options ────────────────────────────────────────────────────
+// inputSize must be a power-of-2 multiple of 32 (e.g. 128, 224, 320, 416, 512).
+// 224 is the sweet spot: fast enough for real-time, accurate enough for close-range
+// webcam shots. 416 (the default) causes "no face detected" on Vercel production
+// because the smaller WASM/CPU inference window reduces effective resolution.
+// scoreThreshold of 0.3 (vs default 0.5) is intentionally lower to be more
+// forgiving of varying lighting conditions in OSCA offices.
+const DETECTOR_OPTIONS_CONFIG = { inputSize: 224 as 224, scoreThreshold: 0.3 };
+
 async function getFaceApi() {
   if (_faceapi) return _faceapi;
   _faceapi = await import("@vladmandic/face-api");
 
+  // On Vercel (production), WebGL may be unavailable or produce silent context losses.
+  // Try WebGL → WASM → CPU in order, ensuring face detection always works in production.
   try {
-    // Prefer WebGL (GPU) — dramatically faster for face detection.
-    // Falls back to CPU if WebGL is unavailable (old/low-spec laptops, no GPU, etc.)
     await _faceapi.tf.setBackend('webgl');
     await _faceapi.tf.ready();
     console.info('[FaceAPI] Using WebGL (GPU) backend — fast mode.');
   } catch {
     try {
-      console.warn('[FaceAPI] WebGL unavailable — falling back to CPU backend.');
-      await _faceapi.tf.setBackend('cpu');
+      console.warn('[FaceAPI] WebGL unavailable — falling back to WASM backend.');
+      await _faceapi.tf.setBackend('wasm');
       await _faceapi.tf.ready();
-    } catch (err) {
-      console.error('[FaceAPI] All backends failed:', err);
+      console.info('[FaceAPI] Using WASM backend.');
+    } catch {
+      try {
+        console.warn('[FaceAPI] WASM unavailable — falling back to CPU backend.');
+        await _faceapi.tf.setBackend('cpu');
+        await _faceapi.tf.ready();
+        console.info('[FaceAPI] Using CPU backend.');
+      } catch (err) {
+        console.error('[FaceAPI] All backends failed:', err);
+      }
     }
   }
 
@@ -85,9 +102,13 @@ export async function getFaceDescriptor(
   // Use cached module reference — no repeated dynamic import overhead per scan.
   const faceapi = await getFaceApi();
 
+  // Use tuned options: inputSize 224 works reliably in production (Vercel)
+  // where default inputSize 416 causes false "no face detected" errors.
+  const detectorOptions = new faceapi.TinyFaceDetectorOptions(DETECTOR_OPTIONS_CONFIG);
+
   try {
     const detection = await faceapi
-      .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+      .detectSingleFace(videoEl, detectorOptions)
       .withFaceLandmarks()
       .withFaceDescriptor();
 
@@ -98,7 +119,7 @@ export async function getFaceDescriptor(
     if (!detection && faceapi.tf.getBackend() === 'webgl') {
       try {
         faceapi.tf.zeros([1]).dataSync();
-      } catch (glErr) {
+      } catch {
         throw new Error("Silent WebGL context loss detected");
       }
     }
@@ -116,7 +137,7 @@ export async function getFaceDescriptor(
       console.info('[FaceAPI] Switched to CPU backend after WebGL failure. Retrying scan…');
 
       const detection = await faceapi
-        .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+        .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions(DETECTOR_OPTIONS_CONFIG))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
