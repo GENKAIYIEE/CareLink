@@ -161,6 +161,7 @@ export function RegistrationForm() {
       healthConditions: "",
       emergencyContactName: "",
       emergencyContactNum: "",
+      emergencyContactRel: "",
       email: "",
     },
   });

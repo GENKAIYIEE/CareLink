@@ -91,6 +91,18 @@ export async function getFaceDescriptor(
       .withFaceLandmarks()
       .withFaceDescriptor();
 
+    // Proactive WebGL health check if detection is null:
+    // TensorFlow.js often swallows WebGL context loss errors and just returns undefined.
+    // If we didn't find a face AND we are on WebGL, test the GPU with a tiny operation.
+    // If WebGL is lost, this will throw and trigger the CPU fallback catch block.
+    if (!detection && faceapi.tf.getBackend() === 'webgl') {
+      try {
+        faceapi.tf.zeros([1]).dataSync();
+      } catch (glErr) {
+        throw new Error("Silent WebGL context loss detected");
+      }
+    }
+
     if (!detection) return null;
     return detection.descriptor;
   } catch (err) {

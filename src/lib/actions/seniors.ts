@@ -122,16 +122,20 @@ export async function registerSeniorAction(data: SeniorInputData) {
       return { success: false, error: "Could not generate a unique OSCA ID after several attempts. Please try again." };
     }
 
-    // 3. Log the Activity
-    const session = await getSession();
-    if (session && session.role === 'ADMIN') {
-      await prisma.activityLog.create({
-        data: {
-          action:  "Registered Senior",
-          details: `${senior.firstName} ${senior.lastName} (${senior.oscaId})`,
-          adminId: session.userId,
-        },
-      });
+    // 3. Log the Activity (Non-fatal)
+    try {
+      const session = await getSession();
+      if (session && session.role === 'ADMIN') {
+        await prisma.activityLog.create({
+          data: {
+            action:  "Registered Senior",
+            details: `${senior.firstName} ${senior.lastName} (${senior.oscaId})`,
+            adminId: session.userId,
+          },
+        });
+      }
+    } catch (logErr) {
+      console.warn("[registerSenior] Activity log failed (non-fatal):", logErr);
     }
 
     // 4. Revalidate the list
@@ -147,7 +151,16 @@ export async function registerSeniorAction(data: SeniorInputData) {
       },
     };
   } catch (error: unknown) {
-    console.error("Error registering senior:", error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002' &&
+      Array.isArray(error.meta?.target) &&
+      (error.meta.target as string[]).includes('email')
+    ) {
+      return { success: false, error: "This email address is already registered to another senior citizen." };
+    }
+    const code = (error as { code?: string })?.code ?? 'UNKNOWN';
+    console.error(`[registerSenior] DB error (code=${code}):`, error);
     return { success: false, error: "Database error during registration." };
   }
 }
