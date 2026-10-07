@@ -6,6 +6,8 @@ import { LiveUpdate } from '@/components/senior/LiveUpdate';
 import MonthlyPictureUpload from './MonthlyPictureUpload';
 import { getEffectiveStatus } from '@/lib/utils/status';
 import { format } from 'date-fns';
+import { FaceEnrollmentSection } from '@/components/senior/FaceEnrollmentSection';
+import { supabaseServer } from '@/lib/supabase-server';
 
 export default async function SeniorProfilePage() {
   const session = await getSession();
@@ -16,6 +18,18 @@ export default async function SeniorProfilePage() {
   });
 
   if (!senior) return null;
+
+  let hasFaceEnrolled = false;
+  try {
+    const { data: faceData } = await supabaseServer
+      .from('Senior')
+      .select('face_embedding')
+      .eq('id', senior.id)
+      .single();
+    hasFaceEnrolled = faceData?.face_embedding !== null && faceData?.face_embedding !== undefined;
+  } catch (error) {
+    console.error("Error checking face embedding:", error);
+  }
 
   const age = senior.dateOfBirth ? new Date().getFullYear() - new Date(senior.dateOfBirth).getFullYear() : 'N/A';
 
@@ -49,6 +63,7 @@ export default async function SeniorProfilePage() {
         <div className="pt-16 px-8 pb-8">
           <div className="mb-8">
             <MonthlyPictureUpload seniorId={senior.id} lastPictureUpdate={senior.lastPictureUpdate} />
+            <FaceEnrollmentSection seniorId={senior.id} hasFaceEnrolled={hasFaceEnrolled} />
           </div>
 
           <div className="flex justify-between items-start mb-8">
