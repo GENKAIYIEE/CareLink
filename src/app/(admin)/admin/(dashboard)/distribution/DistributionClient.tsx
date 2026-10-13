@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   searchSeniors,
   logAssistanceBatch,
@@ -26,6 +26,9 @@ import {
   XCircle,
   TriangleAlert,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -162,8 +165,44 @@ export default function DistributionClient({
   const [searchResults, setSearchResults] = useState<Senior[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedSeniors, setSelectedSeniors] = useState<Senior[]>([]);
+  const selectedIdsSet = useMemo(() => new Set(selectedSeniors.map((s) => s.id)), [selectedSeniors]);
   // Track how each senior was added: 'face' | 'manual'
   const [verificationMethods, setVerificationMethods] = useState<Record<string, 'face' | 'manual'>>({});
+
+  // ── Selected list view controls (search & pagination) ───────────────────
+  const [selectedListSearch, setSelectedListSearch] = useState('');
+  const [selectedListPage, setSelectedListPage] = useState(1);
+  const SELECTED_PAGE_SIZE = 10;
+
+  const uniqueBarangaysCount = useMemo(
+    () => new Set(selectedSeniors.map((s) => s.barangay).filter(Boolean)).size,
+    [selectedSeniors]
+  );
+
+  const filteredSelectedSeniors = useMemo(() => {
+    if (!selectedListSearch.trim()) return selectedSeniors;
+    const q = selectedListSearch.toLowerCase().trim();
+    return selectedSeniors.filter(
+      (s) =>
+        s.firstName.toLowerCase().includes(q) ||
+        s.lastName.toLowerCase().includes(q) ||
+        s.oscaId.toLowerCase().includes(q) ||
+        (s.barangay && s.barangay.toLowerCase().includes(q))
+    );
+  }, [selectedSeniors, selectedListSearch]);
+
+  const totalSelectedPages = Math.ceil(filteredSelectedSeniors.length / SELECTED_PAGE_SIZE) || 1;
+
+  const paginatedSelectedSeniors = useMemo(() => {
+    const start = (selectedListPage - 1) * SELECTED_PAGE_SIZE;
+    return filteredSelectedSeniors.slice(start, start + SELECTED_PAGE_SIZE);
+  }, [filteredSelectedSeniors, selectedListPage]);
+
+  useEffect(() => {
+    if (selectedListPage > totalSelectedPages && totalSelectedPages > 0) {
+      setSelectedListPage(totalSelectedPages);
+    }
+  }, [totalSelectedPages, selectedListPage]);
 
   const [barangays, setBarangays] = useState<string[]>([]);
   const [selectedBarangay, setSelectedBarangay] = useState('');
@@ -278,7 +317,7 @@ export default function DistributionClient({
   // ── Left panel handlers ────────────────────────────────────────────────
 
   const handleSelectSenior = (senior: Senior) => {
-    if (!selectedSeniors.some((s) => s.id === senior.id)) {
+    if (!selectedIdsSet.has(senior.id)) {
       setSelectedSeniors((prev) => [...prev, senior]);
       setVerificationMethods((prev) => ({ ...prev, [senior.id]: 'manual' }));
     }
@@ -298,22 +337,32 @@ export default function DistributionClient({
   const handleBarangayFilter = async (barangay: string) => {
     if (!barangay) return;
     setIsLoadingBarangay(true);
-    const seniorsInBarangay = await getSeniorsByBarangay(barangay);
-    const newSeniors = seniorsInBarangay
-      .filter((newSen) => !selectedSeniors.some((s) => s.id === newSen.id))
-      .map((sen) => ({ ...sen, photoUrl: null }));
-    if (newSeniors.length > 0) {
-      setSelectedSeniors((prev) => [...prev, ...newSeniors]);
-      const methods: Record<string, 'face' | 'manual'> = {};
-      newSeniors.forEach((s) => { methods[s.id] = 'manual'; });
-      setVerificationMethods((prev) => ({ ...prev, ...methods }));
-      setNotification({ type: 'success', message: `Added ${newSeniors.length} seniors from ${barangay}.` });
-    } else {
-      setNotification({ type: 'success', message: `All seniors from ${barangay} are already added.` });
+    try {
+      const seniorsInBarangay = await getSeniorsByBarangay(barangay);
+      const currentSelectedIds = new Set(selectedSeniors.map((s) => s.id));
+      const newSeniors = seniorsInBarangay
+        .filter((newSen) => !currentSelectedIds.has(newSen.id))
+        .map((sen) => ({ ...sen, photoUrl: null }));
+      const isAll = barangay === 'ALL' || barangay === 'All Barangays';
+      const label = isAll ? 'all barangays' : `Barangay ${barangay}`;
+
+      if (newSeniors.length > 0) {
+        setSelectedSeniors((prev) => [...prev, ...newSeniors]);
+        const methods: Record<string, 'face' | 'manual'> = {};
+        newSeniors.forEach((s) => { methods[s.id] = 'manual'; });
+        setVerificationMethods((prev) => ({ ...prev, ...methods }));
+        setNotification({ type: 'success', message: `Added ${newSeniors.length} seniors from ${label}.` });
+      } else {
+        setNotification({ type: 'success', message: `All eligible seniors from ${label} are already added.` });
+      }
+      setTimeout(() => setNotification(null), 3500);
+    } catch (err) {
+      console.error("Error filtering seniors by barangay:", err);
+      setNotification({ type: 'error', message: 'Failed to fetch beneficiaries for selected barangay.' });
+    } finally {
+      setIsLoadingBarangay(false);
+      setSelectedBarangay('');
     }
-    setTimeout(() => setNotification(null), 3000);
-    setIsLoadingBarangay(false);
-    setSelectedBarangay('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -331,14 +380,22 @@ export default function DistributionClient({
     });
 
     if (result.success) {
+      const count = result.count ?? 0;
+      const alreadyClaimedCount = selectedSeniors.length - count;
+      let msg = `Successfully logged benefit distribution for ${count} senior citizen${count !== 1 ? 's' : ''}.`;
+      if (alreadyClaimedCount > 0) {
+        msg += ` (${alreadyClaimedCount} already claimed previously and were skipped).`;
+      }
       setNotification({
         type: 'success',
-        message: `Successfully logged benefit distribution for ${result.count} senior citizen${result.count !== 1 ? 's' : ''}.`,
+        message: msg,
       });
       setSelectedSeniors([]);
       setSelectedProgramId('');
       setVerificationMethods({});
       setSignature(null);
+      setSelectedListSearch('');
+      setSelectedListPage(1);
       router.refresh();
       setTimeout(() => setNotification(null), 5000);
     } else {
@@ -434,7 +491,7 @@ export default function DistributionClient({
             <div>
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <Gift className="w-5 h-5 mr-2 text-green-600" />
-                Select All
+                Select Beneficiaries
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Select multiple seniors or filter by barangay to record assistance.
@@ -443,17 +500,19 @@ export default function DistributionClient({
 
             {/* Quick Filter by Barangay */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
+              <Filter className="w-4 h-4 text-gray-400 shrink-0" />
               <BarangayCombobox
                 value={selectedBarangay}
                 onChange={handleBarangayFilter}
                 disabled={isLoadingBarangay}
                 placeholder="Filter by Barangay"
                 inputClassName="text-sm py-1.5 px-3"
-                className="w-48"
+                className="w-60"
+                includeAllOption={true}
+                allOptionLabel="All Barangays"
               />
               {isLoadingBarangay && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 shrink-0" />
               )}
             </div>
           </div>
@@ -478,9 +537,25 @@ export default function DistributionClient({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="block text-sm font-semibold text-gray-900">1. Select Beneficiaries</label>
-                  <span className="text-xs font-medium bg-green-100 text-green-800 px-2.5 py-0.5 rounded-full">
-                    {selectedSeniors.length} Selected
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium bg-green-100 text-green-800 px-2.5 py-0.5 rounded-full">
+                      {selectedSeniors.length} Selected
+                    </span>
+                    {selectedSeniors.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSeniors([]);
+                          setVerificationMethods({});
+                          setSelectedListSearch('');
+                          setSelectedListPage(1);
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700 font-medium hover:underline transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Search combobox */}
@@ -506,7 +581,7 @@ export default function DistributionClient({
                       {searchResults.length > 0 ? (
                         <ul className="max-h-64 overflow-y-auto py-1">
                           {searchResults.map((senior) => {
-                            const isSelected = selectedSeniors.some((s) => s.id === senior.id);
+                            const isSelected = selectedIdsSet.has(senior.id);
                             return (
                               <li
                                 key={senior.id}
@@ -540,29 +615,188 @@ export default function DistributionClient({
                   )}
                 </div>
 
-                {/* Selected pill badges */}
+                {/* Professional Selected Beneficiaries List / Table */}
                 {selectedSeniors.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-60 overflow-y-auto">
-                    {selectedSeniors.map((senior) => (
-                      <div
-                        key={senior.id}
-                        className={`flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm ${verificationMethods[senior.id] === 'face' ? 'border-green-300' : 'border-gray-200'}`}
-                      >
-                        {verificationMethods[senior.id] === 'face' && (
-                          <ScanFace className="w-3 h-3 text-[#006b2c] shrink-0" />
-                        )}
-                        <span className="text-sm font-medium text-gray-700">
-                          {senior.firstName} {senior.lastName}
+                  <div className="mt-4 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+                    {/* List Toolbar / Header */}
+                    <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Selected Beneficiaries
                         </span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-[#006b2c]">
+                          {selectedSeniors.length} {selectedSeniors.length === 1 ? 'senior' : 'seniors'}
+                        </span>
+                        {uniqueBarangaysCount > 1 && (
+                          <span className="text-xs text-gray-400 hidden sm:inline">
+                            • {uniqueBarangaysCount} barangays
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-auto">
+                        {selectedSeniors.length > 5 && (
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Filter selected..."
+                              value={selectedListSearch}
+                              onChange={(e) => {
+                                setSelectedListSearch(e.target.value);
+                                setSelectedListPage(1);
+                              }}
+                              className="pl-8 pr-7 py-1.5 text-xs bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 w-36 sm:w-48 text-gray-800 shadow-2xs"
+                            />
+                            {selectedListSearch && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedListSearch('')}
+                                className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+
                         <button
                           type="button"
-                          onClick={() => handleRemoveSenior(senior.id)}
-                          className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-colors"
+                          onClick={() => {
+                            setSelectedSeniors([]);
+                            setVerificationMethods({});
+                            setSelectedListSearch('');
+                            setSelectedListPage(1);
+                          }}
+                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg font-medium transition-colors border border-transparent hover:border-red-100 flex items-center gap-1"
                         >
-                          <X className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3" />
+                          Clear All
                         </button>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Clean Table View with Smooth Scroll */}
+                    <div className="overflow-x-auto max-h-[280px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-50">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead className="sticky top-0 bg-gray-50/95 backdrop-blur-sm z-10 text-[11px] font-bold text-gray-500 border-b border-gray-200 uppercase tracking-wider shadow-2xs">
+                          <tr>
+                            <th className="py-2.5 px-3 w-12 text-center">#</th>
+                            <th className="py-2.5 px-3">Beneficiary</th>
+                            <th className="py-2.5 px-3">Barangay</th>
+                            <th className="py-2.5 px-3">Method</th>
+                            <th className="py-2.5 px-3 text-right w-16">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700">
+                          {paginatedSelectedSeniors.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="py-8 text-center text-xs text-gray-400">
+                                No selected beneficiaries match &quot;{selectedListSearch}&quot;
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedSelectedSeniors.map((senior, idx) => {
+                              const globalIndex = (selectedListPage - 1) * SELECTED_PAGE_SIZE + idx + 1;
+                              const isFace = verificationMethods[senior.id] === 'face';
+                              return (
+                                <tr
+                                  key={senior.id}
+                                  className="hover:bg-green-50/50 transition-colors group"
+                                >
+                                  <td className="py-2.5 px-3 text-center text-xs font-mono text-gray-400">
+                                    {globalIndex}
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-8 h-8 rounded-full bg-green-100 text-[#006b2c] flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-green-200/50">
+                                        {senior.photoUrl ? (
+                                          <img src={senior.photoUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span>{senior.firstName[0]}{senior.lastName[0]}</span>
+                                        )}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="font-semibold text-gray-900 text-xs truncate leading-tight">
+                                          {senior.lastName}, {senior.firstName}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400 font-mono leading-tight">
+                                          OSCA ID: {senior.oscaId}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-gray-100 text-gray-700 border border-gray-200/60">
+                                      {senior.barangay || '—'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    {isFace ? (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-[#006b2c] border border-emerald-200/70">
+                                        <ScanFace className="w-3 h-3 text-[#006b2c]" /> Face Verified
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 border border-gray-200/60">
+                                        Manual
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveSenior(senior.id)}
+                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Remove from selection"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Table Footer with Pagination Controls */}
+                    {filteredSelectedSeniors.length > SELECTED_PAGE_SIZE && (
+                      <div className="px-4 py-2.5 bg-gray-50/80 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+                        <span>
+                          Showing{' '}
+                          <strong className="text-gray-700 font-semibold">
+                            {(selectedListPage - 1) * SELECTED_PAGE_SIZE + 1}–
+                            {Math.min(selectedListPage * SELECTED_PAGE_SIZE, filteredSelectedSeniors.length)}
+                          </strong>{' '}
+                          of <strong className="text-gray-700 font-semibold">{filteredSelectedSeniors.length}</strong>
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={selectedListPage <= 1}
+                            onClick={() => setSelectedListPage((p) => Math.max(1, p - 1))}
+                            className="p-1 rounded-md border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors shadow-2xs"
+                            title="Previous Page"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <span className="px-2 text-gray-600 font-medium">
+                            Page {selectedListPage} of {totalSelectedPages}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={selectedListPage >= totalSelectedPages}
+                            onClick={() => setSelectedListPage((p) => Math.min(totalSelectedPages, p + 1))}
+                            className="p-1 rounded-md border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors shadow-2xs"
+                            title="Next Page"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
