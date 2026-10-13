@@ -48,6 +48,9 @@ model Senior {
   claims           Claim[]
   delegate         Delegate? @relation(fields: [delegateId], references: [id])
   notifications    Notification[]
+
+  @@index([barangay])
+  @@index([status])
 }
 
 model Delegate {
@@ -84,6 +87,9 @@ model Claim {
   claimedBy   Delegate?      @relation(fields: [claimedById], references: [id])
   program     BenefitProgram @relation(fields: [programId], references: [id])
   senior      Senior         @relation(fields: [seniorId], references: [id])
+
+  @@unique([seniorId, programId])
+  @@index([programId, seniorId])
 }
 
 model Announcement {

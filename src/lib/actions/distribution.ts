@@ -191,53 +191,74 @@ export async function logAssistanceBatch(data: {
       return { success: false, error: "Claims for this program cannot be recorded before the distribution date." };
     }
 
-    const existingClaims = await prisma.claim.findMany({
-      where: {
-        programId: data.programId,
-        seniorId: { in: data.seniorIds }
-      }
-    });
+    const uniqueSeniorIds = Array.from(new Set(data.seniorIds));
+    if (uniqueSeniorIds.length === 0) {
+      return { success: false, error: "No beneficiaries selected." };
+    }
 
-    const existingSeniorIds = new Set(existingClaims.map(c => c.seniorId));
-    
-    // Update existing Unclaimed claims
-    const toUpdate = existingClaims.filter(c => c.status === 'Unclaimed');
-    if (toUpdate.length > 0) {
-      await prisma.claim.updateMany({
-        where: { id: { in: toUpdate.map(c => c.id) } },
-        data: {
-          status: 'Claimed',
-          claimedAt: new Date(),
-          signature: data.signature || null,
+    // ─── Execute in a single transactional unit with chunking ─────────────
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch existing claims for these seniors under this program
+      const existingClaims = await tx.claim.findMany({
+        where: {
+          programId: data.programId,
+          seniorId: { in: uniqueSeniorIds }
+        },
+        select: {
+          id: true,
+          seniorId: true,
+          status: true,
         }
       });
-    }
 
-    // Create new claims for those without any
-    const toCreateIds = data.seniorIds.filter(id => !existingSeniorIds.has(id));
-    if (toCreateIds.length > 0) {
-      await prisma.claim.createMany({
-        data: toCreateIds.map(seniorId => ({
-          seniorId,
-          programId: data.programId,
-          status: 'Claimed',
-          claimedAt: new Date(),
-          signature: data.signature || null,
-        }))
-      });
-    }
+      const existingSeniorIds = new Set(existingClaims.map(c => c.seniorId));
 
-    // Write audit log with per-senior verification details
-    const session = await getSession();
-    if (session && session.role === 'ADMIN') {
-      // Fetch senior names for the log
-      const seniors = await prisma.senior.findMany({
-        where: { id: { in: data.seniorIds } },
-        select: { id: true, firstName: true, lastName: true, oscaId: true }
-      });
-      
+      // 2. Update existing Unclaimed claims to Claimed
+      const toUpdate = existingClaims.filter(c => c.status === 'Unclaimed');
+      if (toUpdate.length > 0) {
+        const CHUNK_SIZE = 300;
+        for (let i = 0; i < toUpdate.length; i += CHUNK_SIZE) {
+          const chunk = toUpdate.slice(i, i + CHUNK_SIZE);
+          await tx.claim.updateMany({
+            where: { id: { in: chunk.map(c => c.id) } },
+            data: {
+              status: 'Claimed',
+              claimedAt: new Date(),
+              signature: data.signature || null,
+            }
+          });
+        }
+      }
+
+      // 3. Create new claims for seniors who don't have any existing claim record
+      const toCreateIds = uniqueSeniorIds.filter(id => !existingSeniorIds.has(id));
+      let createdCount = 0;
+
+      if (toCreateIds.length > 0) {
+        const CHUNK_SIZE = 300;
+        for (let i = 0; i < toCreateIds.length; i += CHUNK_SIZE) {
+          const chunk = toCreateIds.slice(i, i + CHUNK_SIZE);
+          const createRes = await tx.claim.createMany({
+            data: chunk.map(seniorId => ({
+              seniorId,
+              programId: data.programId,
+              status: 'Claimed',
+              claimedAt: new Date(),
+              signature: data.signature || null,
+            })),
+            skipDuplicates: true, // Prevents duplicate errors if concurrently inserted
+          });
+          createdCount += createRes.count;
+        }
+      }
+
+      // 4. Activity log generation without redundant DB roundtrip
       let seniorDetails = '';
-      if (seniors.length <= 3) {
+      if (uniqueSeniorIds.length <= 3) {
+        const seniors = await tx.senior.findMany({
+          where: { id: { in: uniqueSeniorIds } },
+          select: { id: true, firstName: true, lastName: true, oscaId: true }
+        });
         seniorDetails = seniors.map(s => {
           const method = data.seniorVerificationMethods?.[s.id];
           return method === 'face'
@@ -245,23 +266,34 @@ export async function logAssistanceBatch(data: {
             : `${s.firstName} ${s.lastName} added via manual search — no face verification.`;
         }).join(' ');
       } else {
-        const faceCount = seniors.filter(s => data.seniorVerificationMethods?.[s.id] === 'face').length;
-        const manualCount = seniors.length - faceCount;
-        seniorDetails = `${seniors.length} seniors processed (${faceCount} face verified, ${manualCount} manual).`;
+        const verificationMap = data.seniorVerificationMethods || {};
+        let faceCount = 0;
+        for (const id of uniqueSeniorIds) {
+          if (verificationMap[id] === 'face') faceCount++;
+        }
+        const manualCount = uniqueSeniorIds.length - faceCount;
+        seniorDetails = `${uniqueSeniorIds.length} seniors processed (${faceCount} face verified, ${manualCount} manual).`;
       }
 
-      await prisma.activityLog.create({
+      await tx.activityLog.create({
         data: {
           action: "Logged Assistance",
           details: `Benefit distributed under ${program.title}. ${seniorDetails}`,
-          adminId: session.userId,
+          adminId: authSession.userId,
         },
       });
-    }
+
+      return {
+        count: toUpdate.length + createdCount,
+        skipped: uniqueSeniorIds.length - (toUpdate.length + createdCount)
+      };
+    }, {
+      timeout: 30000,
+    });
 
     revalidatePath('/admin/distribution');
     revalidatePath('/admin/claims');
-    return { success: true, count: toCreateIds.length + toUpdate.length };
+    return { success: true, count: result.count, skipped: result.skipped };
   } catch (error) {
     console.error("Error logging batch assistance:", error);
     return { success: false, error: 'Failed to log assistance for all seniors.' };
@@ -289,8 +321,20 @@ export async function getSeniorsByBarangay(barangay: string) {
     const session = await getSession();
     if (!session || session.role !== 'ADMIN') return [];
 
+    const isAll = barangay === 'ALL' || barangay === 'All Barangays';
+    const whereClause: {
+      status?: { not: string };
+      barangay?: string;
+    } = {
+      status: { not: 'Deceased' }, // Ensure deceased seniors are excluded
+    };
+
+    if (!isAll) {
+      whereClause.barangay = barangay;
+    }
+
     return await prisma.senior.findMany({
-      where: { barangay },
+      where: whereClause,
       select: {
         id: true,
         oscaId: true,
@@ -300,7 +344,11 @@ export async function getSeniorsByBarangay(barangay: string) {
         barangay: true,
         // specifically skipping photoUrl and face_embedding to avoid huge payloads
         delegate: true,
-      }
+      },
+      orderBy: [
+        { barangay: 'asc' },
+        { lastName: 'asc' },
+      ],
     });
   } catch (error) {
     console.error("Error fetching seniors by barangay:", error);
