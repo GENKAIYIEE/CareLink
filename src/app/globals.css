@@ -80,6 +80,13 @@ body {
     flex-shrink: 0;
   }
 
+  #print-id-card .print-card-logo,
+  #print-id-card .print-card-logo-spacer {
+    width: 7.5mm;
+    height: 7.5mm;
+    flex-shrink: 0;
+  }
+
   /* Card body layout */
   #print-id-card .print-card-body {
     display: flex;
