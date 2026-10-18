@@ -632,18 +632,26 @@ export function RegistrationForm() {
             style={{ aspectRatio: "85.6/53.98" }}
           >
             {/* Header */}
-            <div className="print-card-header bg-indigo-900 text-white py-2 px-2 sm:py-2.5 flex items-center justify-center text-center print:py-2">
-              <div className="w-full">
-                <p className="text-[10px] sm:text-xs font-bold leading-none uppercase mb-[2px]">
+            <div className="print-card-header bg-indigo-900 text-white py-1.5 px-2.5 sm:py-2 sm:px-3 flex items-center justify-between text-center print:py-1.5 print:px-2">
+              <div className="print-card-logo w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white p-[1.5px] shadow-sm ring-1 ring-white/30 shrink-0 overflow-hidden flex items-center justify-center">
+                <img
+                  src="/images/logo-agoo.jpg"
+                  alt="Agoo Seal"
+                  className="w-full h-full object-contain rounded-full"
+                />
+              </div>
+              <div className="flex-1 px-1">
+                <p className="text-[9px] sm:text-[10px] font-bold leading-none uppercase tracking-tight text-white mb-[2px]">
                   Republic of the Philippines
                 </p>
-                <p className="text-[7px] sm:text-[9px] text-indigo-200 uppercase tracking-wider leading-none">
+                <p className="text-[7px] sm:text-[8px] text-indigo-200 uppercase tracking-wider leading-none">
                   Municipality of Agoo, La Union
                 </p>
-                <p className="text-xs sm:text-sm font-bold text-yellow-400 mt-[4px] uppercase leading-none">
+                <p className="text-[11px] sm:text-[13px] font-extrabold text-yellow-400 mt-[3px] uppercase leading-none tracking-wide">
                   Senior Citizen ID
                 </p>
               </div>
+              <div className="print-card-logo-spacer w-8 h-8 sm:w-9 sm:h-9 shrink-0" aria-hidden="true" />
             </div>
 
             {/* Body */}
@@ -692,18 +700,24 @@ export function RegistrationForm() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-3 gap-1">
                   <div>
                     <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">DOB</p>
-                    <p className="text-[9px] sm:text-[10px] font-semibold leading-none">
+                    <p className="text-[9px] sm:text-[10px] font-semibold leading-none truncate">
                       {formData.dateOfBirth || "--/--/----"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">Sex</p>
+                    <p className="text-[9px] sm:text-[10px] font-semibold uppercase leading-none truncate">
+                      {formData.gender || "--"}
                     </p>
                   </div>
                   <div>
                     <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">
                       Blood
                     </p>
-                    <p className="text-[9px] sm:text-[10px] font-semibold text-red-600 leading-none">
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-red-600 leading-none truncate">
                       {formData.bloodType || "--"}
                     </p>
                   </div>
