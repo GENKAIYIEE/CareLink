@@ -167,9 +167,18 @@ export function RegistrationForm() {
   });
 
   const formData = watch();
-  const age = formData.dateOfBirth
-    ? new Date().getFullYear() - new Date(formData.dateOfBirth).getFullYear()
-    : 0;
+  const calculatedAge = (() => {
+    if (!formData.dateOfBirth) return null;
+    const dob = new Date(formData.dateOfBirth);
+    if (isNaN(dob.getTime())) return null;
+    const today = new Date();
+    let calculated = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      calculated--;
+    }
+    return calculated >= 0 ? calculated : null;
+  })();
 
   // ─── Navigation ───────────────────────────────────────────────────────────
 
@@ -700,16 +709,22 @@ export function RegistrationForm() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-[1.25fr_0.7fr_0.9fr_0.75fr] gap-1">
                   <div>
                     <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">DOB</p>
-                    <p className="text-[9px] sm:text-[10px] font-semibold leading-none truncate">
+                    <p className="text-[8.5px] sm:text-[9.5px] font-semibold leading-none truncate">
                       {formData.dateOfBirth || "--/--/----"}
                     </p>
                   </div>
                   <div>
+                    <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">Age</p>
+                    <p className="text-[8.5px] sm:text-[9.5px] font-semibold leading-none truncate">
+                      {calculatedAge !== null ? calculatedAge : "--"}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">Sex</p>
-                    <p className="text-[9px] sm:text-[10px] font-semibold uppercase leading-none truncate">
+                    <p className="text-[8.5px] sm:text-[9.5px] font-semibold uppercase leading-none truncate">
                       {formData.gender || "--"}
                     </p>
                   </div>
@@ -717,7 +732,7 @@ export function RegistrationForm() {
                     <p className="text-[7px] text-gray-500 uppercase leading-none mb-[1px]">
                       Blood
                     </p>
-                    <p className="text-[9px] sm:text-[10px] font-semibold text-red-600 leading-none truncate">
+                    <p className="text-[8.5px] sm:text-[9.5px] font-semibold text-red-600 leading-none truncate">
                       {formData.bloodType || "--"}
                     </p>
                   </div>
