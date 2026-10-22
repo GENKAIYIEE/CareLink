@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createAnnouncement } from "@/lib/actions/announcements";
 import { Loader2 } from "lucide-react";
 import { BarangayCombobox } from "@/components/shared/BarangayCombobox";
+import { toast } from "sonner";
 
 export default function CreateAnnouncementForm() {
   const router = useRouter();
@@ -28,12 +29,17 @@ export default function CreateAnnouncementForm() {
       const res = await createAnnouncement({ title, category, status, content, targetBarangay: submittedTargetBarangay });
       
       if (res.success) {
+        toast.success("Announcement published successfully.");
         router.push("/admin/announcements");
       } else {
-        setError(res.error || "Failed to create announcement");
+        const err = res.error || "Failed to create announcement";
+        setError(err);
+        toast.error(err);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      const errMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errMessage);
+      toast.error(errMessage);
     } finally {
       setIsSubmitting(false);
     }

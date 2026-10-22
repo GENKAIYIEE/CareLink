@@ -36,7 +36,7 @@ import Webcam from 'react-webcam';
 import { loadFaceApiModels, getFaceDescriptor, areFaceApiModelsLoaded } from '@/lib/faceApi';
 import { supabase } from '@/lib/supabase';
 import { LiveUpdate } from '@/components/senior/LiveUpdate';
-import SignaturePad from '@/components/admin/SignaturePad';
+import { toast } from 'sonner';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -211,7 +211,6 @@ export default function DistributionClient({
   const [selectedProgramId, setSelectedProgramId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [signature, setSignature] = useState<string | null>(null);
 
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
 
@@ -376,7 +375,6 @@ export default function DistributionClient({
       seniorIds: selectedSeniors.map((s) => s.id),
       programId: selectedProgramId,
       seniorVerificationMethods: verificationMethods,
-      signature: signature || undefined,
     });
 
     if (result.success) {
@@ -390,16 +388,18 @@ export default function DistributionClient({
         type: 'success',
         message: msg,
       });
+      toast.success(msg);
       setSelectedSeniors([]);
       setSelectedProgramId('');
       setVerificationMethods({});
-      setSignature(null);
       setSelectedListSearch('');
       setSelectedListPage(1);
       router.refresh();
       setTimeout(() => setNotification(null), 5000);
     } else {
-      setNotification({ type: 'error', message: result.error || 'Something went wrong.' });
+      const err = result.error || 'Something went wrong.';
+      setNotification({ type: 'error', message: err });
+      toast.error(err);
     }
 
     setIsSubmitting(false);
@@ -809,20 +809,11 @@ export default function DistributionClient({
                 disabled={selectedSeniors.length === 0}
               />
 
-              {/* Step 3: Digital Signature */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-semibold text-gray-900">3. Digital Signature (Required)</label>
-                  {signature && <span className="text-xs font-medium text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3"/> Captured</span>}
-                </div>
-                <SignaturePad onSignatureCapture={setSignature} />
-              </div>
-
               {/* Submit Button */}
               <div className="pt-4 border-t border-gray-100">
                 <button
                   type="submit"
-                  disabled={selectedSeniors.length === 0 || !selectedProgramId || !signature || isSubmitting}
+                  disabled={selectedSeniors.length === 0 || !selectedProgramId || isSubmitting}
                   className="w-full flex items-center justify-center px-6 py-3.5 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-[#006b2c] hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-green-500/30"
                 >
                   {isSubmitting ? (

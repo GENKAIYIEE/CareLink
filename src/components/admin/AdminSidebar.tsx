@@ -14,23 +14,36 @@ import {
   LogOut,
   UserPlus,
   Megaphone,
+  ClipboardList,
 } from 'lucide-react';
 import { logout } from '@/lib/actions/auth';
 import LogoutModal from '@/components/auth/LogoutModal';
+import { getPendingDelegateRequestsCount } from '@/lib/actions/delegates';
+import { useEffect } from 'react';
 
 const navigation = [
-  { name: 'Dashboard',    href: '/admin',               icon: LayoutDashboard },
-  { name: 'Registration', href: '/admin/seniors',       icon: UserCheck },
-  { name: 'Benefits',     href: '/admin/distribution',  icon: CreditCard },
-  { name: 'Programs',     href: '/admin/programs',      icon: CalendarDays },
-  { name: 'Reports',      href: '/admin/reports',       icon: BarChart2 },
-  { name: 'Announcements',  href: '/admin/announcements', icon: Megaphone },
-  { name: 'Activity Log',   href: '/admin/activity',      icon: History },
+  { name: 'Dashboard',         href: '/admin',                  icon: LayoutDashboard },
+  { name: 'Registration',      href: '/admin/seniors',          icon: UserCheck },
+  { name: 'Delegate Requests', href: '/admin/delegates',        icon: UserPlus },
+  { name: 'Benefits',          href: '/admin/distribution',    icon: CreditCard },
+  { name: 'Programs',          href: '/admin/programs',        icon: CalendarDays },
+  { name: 'Reports',           href: '/admin/reports',         icon: BarChart2 },
+  { name: 'Announcements',     href: '/admin/announcements',   icon: Megaphone },
+  { name: 'Activity Log',      href: '/admin/activity',        icon: History },
 ];
 
 export default function AdminSidebar({ systemName = 'CareLink Admin' }: { systemName?: string }) {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    getPendingDelegateRequestsCount().then(setPendingCount).catch(() => {});
+    const interval = setInterval(() => {
+      getPendingDelegateRequestsCount().then(setPendingCount).catch(() => {});
+    }, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col bg-slate-50 border-r-2 border-slate-200 z-50">
@@ -59,7 +72,12 @@ export default function AdminSidebar({ systemName = 'CareLink Admin' }: { system
               }`}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-              {item.name}
+              <span className="flex-1">{item.name}</span>
+              {item.href === '/admin/delegates' && pendingCount > 0 && (
+                <span className="ml-auto bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

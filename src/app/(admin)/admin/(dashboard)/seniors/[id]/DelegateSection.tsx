@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Edit2, Trash2, Plus, UserCheck, X } from "lucide-react";
+import { Users, Edit2, Trash2, Plus, UserCheck, X, Clock, Check, ExternalLink } from "lucide-react";
 import {
   createDelegateAction,
   updateDelegateAction,
   deleteDelegateAction,
+  approveDelegateRequestAction,
+  rejectDelegateRequestAction,
 } from "@/lib/actions/delegates";
+import { toast } from "sonner";
 
 type Delegate = {
   id: string;
@@ -15,12 +18,24 @@ type Delegate = {
   contactNumber: string;
 } | null;
 
+export type PendingDelegateRequest = {
+  id: string;
+  fullName: string;
+  relationship: string;
+  contactNumber: string;
+  documentUrl: string | null;
+  signedDocumentUrl: string | null;
+  createdAt: Date | string;
+} | null;
+
 export default function DelegateSection({
   seniorId,
   initialDelegate,
+  pendingRequest,
 }: {
   seniorId: string;
   initialDelegate: Delegate;
+  pendingRequest?: PendingDelegateRequest;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,21 +78,29 @@ export default function DelegateSection({
         const res = await updateDelegateAction(data);
         if (res.success) {
           setSuccessMsg("Delegate updated successfully.");
+          toast.success("Delegate updated successfully.");
           setIsEditing(false);
         } else {
-          setErrorMsg(res.error || "Failed to update delegate.");
+          const err = res.error || "Failed to update delegate.";
+          setErrorMsg(err);
+          toast.error(err);
         }
       } else {
         const res = await createDelegateAction(data);
         if (res.success) {
           setSuccessMsg("Delegate assigned successfully.");
+          toast.success("Delegate assigned successfully.");
           setIsEditing(false);
         } else {
-          setErrorMsg(res.error || "Failed to assign delegate.");
+          const err = res.error || "Failed to assign delegate.";
+          setErrorMsg(err);
+          toast.error(err);
         }
       }
-    } catch (err) {
-      setErrorMsg("An unexpected error occurred.");
+    } catch {
+      const err = "An unexpected error occurred.";
+      setErrorMsg(err);
+      toast.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -95,11 +118,66 @@ export default function DelegateSection({
       const res = await deleteDelegateAction(initialDelegate.id, seniorId);
       if (res.success) {
         setSuccessMsg("Delegate removed successfully.");
+        toast.success("Delegate removed successfully.");
       } else {
-        setErrorMsg(res.error || "Failed to remove delegate. Note: Only SuperAdmins can delete delegates.");
+        const err = res.error || "Failed to remove delegate. Note: Only SuperAdmins can delete delegates.";
+        setErrorMsg(err);
+        toast.error(err);
       }
-    } catch (err) {
-      setErrorMsg("An unexpected error occurred.");
+    } catch {
+      const err = "An unexpected error occurred.";
+      setErrorMsg(err);
+      toast.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleApproveRequest = async () => {
+    if (!pendingRequest) return;
+    setIsSubmitting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await approveDelegateRequestAction(pendingRequest.id);
+      if (res.success) {
+        setSuccessMsg("Delegate nomination approved successfully.");
+        toast.success("Delegate nomination approved successfully.");
+      } else {
+        const err = res.error || "Failed to approve delegate.";
+        setErrorMsg(err);
+        toast.error(err);
+      }
+    } catch {
+      const err = "Failed to approve delegate request.";
+      setErrorMsg(err);
+      toast.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectRequest = async () => {
+    if (!pendingRequest) return;
+    const reason = prompt("Enter a reason for rejecting this nomination (optional):");
+    if (reason === null) return;
+    setIsSubmitting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await rejectDelegateRequestAction(pendingRequest.id, reason.trim() || undefined);
+      if (res.success) {
+        setSuccessMsg("Delegate nomination rejected.");
+        toast.success("Delegate nomination rejected.");
+      } else {
+        const err = res.error || "Failed to reject delegate.";
+        setErrorMsg(err);
+        toast.error(err);
+      }
+    } catch {
+      const err = "Failed to reject delegate request.";
+      setErrorMsg(err);
+      toast.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -212,6 +290,60 @@ export default function DelegateSection({
         {errorMsg && (
           <div className="mb-4 p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-200">
             {errorMsg}
+          </div>
+        )}
+
+        {pendingRequest && (
+          <div className="mb-4 bg-amber-50 rounded-lg p-4 border border-amber-200">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 text-amber-900 text-xs font-bold uppercase tracking-wider">
+                <Clock className="w-3.5 h-3.5 text-amber-700" /> Pending Nomination from Senior
+              </div>
+              <span className="text-[11px] text-amber-700 font-medium">
+                {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(pendingRequest.createdAt))}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-3 mt-1">
+              <div>
+                <h4 className="text-sm font-bold text-gray-900">{pendingRequest.fullName}</h4>
+                <p className="text-xs text-gray-700 mt-0.5 font-medium">
+                  {pendingRequest.relationship} · {pendingRequest.contactNumber}
+                </p>
+              </div>
+              {pendingRequest.signedDocumentUrl && (
+                <a
+                  href={pendingRequest.signedDocumentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white border border-amber-300 rounded text-amber-900 hover:bg-amber-100/50 transition-colors duration-150 shrink-0"
+                >
+                  <span>View ID / Doc</span>
+                  <ExternalLink className="w-3 h-3 text-amber-700" />
+                </a>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-amber-200/70">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleApproveRequest}
+                className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-green-700 hover:bg-green-800 rounded transition-colors duration-150 disabled:opacity-50"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {isSubmitting ? "Approving…" : "Approve as Delegate"}
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleRejectRequest}
+                className="inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold text-red-700 bg-white hover:bg-red-50 border border-red-300 rounded transition-colors duration-150 disabled:opacity-50"
+              >
+                <X className="w-3.5 h-3.5" />
+                Reject
+              </button>
+            </div>
           </div>
         )}
 

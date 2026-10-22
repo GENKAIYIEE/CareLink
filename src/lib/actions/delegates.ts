@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { z } from "zod";
+import { supabaseServer } from "@/lib/supabase-server";
+import { APP_DOC_BUCKET, detectMimeType } from "@/lib/application-documents";
 
 const delegateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -349,5 +351,402 @@ export async function seniorRemoveDelegateAction(delegateId: string) {
   } catch (error) {
     console.error("Error deleting delegate:", error);
     return { success: false, error: "Failed to remove delegate." };
+  }
+}
+
+// ─── Senior: Submit Delegate Nomination Request ───────────────────────────────
+
+export async function submitDelegateRequestAction(formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SENIOR") {
+      return { success: false, error: "Unauthorized. Please log in as a senior." };
+    }
+
+    const firstName = (formData.get("firstName") as string || "").trim();
+    const lastName = (formData.get("lastName") as string || "").trim();
+    const relationship = (formData.get("relationship") as string || "").trim();
+    const contactNumber = (formData.get("contactNumber") as string || "").trim();
+    const file = formData.get("file") as File | null;
+
+    if (!firstName || !lastName || !relationship || !contactNumber) {
+      return { success: false, error: "All required delegate fields must be provided." };
+    }
+
+    const senior = await prisma.senior.findUnique({
+      where: { id: session.userId },
+      include: {
+        delegate: true,
+        delegateRequests: {
+          where: { status: "Pending" },
+        },
+      },
+    });
+
+    if (!senior) {
+      return { success: false, error: "Senior record not found." };
+    }
+
+    if (senior.delegate) {
+      return { success: false, error: "You already have an active delegate assigned." };
+    }
+
+    if (senior.delegateRequests.length > 0) {
+      return { success: false, error: "You already have a pending delegate nomination awaiting OSCA review." };
+    }
+
+    if (!file || file.size === 0) {
+      return { success: false, error: "Please upload a photo or scan of the delegate's valid ID or document." };
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      return { success: false, error: "Document file exceeds 3MB limit." };
+    }
+
+    let documentStoragePath: string | null = null;
+
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const detected = detectMimeType(bytes);
+      if (!detected) {
+        return { success: false, error: "Invalid file type. Only JPG, PNG, and PDF are allowed." };
+      }
+
+      const safeExt = detected === "application/pdf" ? "pdf" : detected === "image/png" ? "png" : "jpg";
+      const filename = `delegate-requests/${session.userId}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${safeExt}`;
+
+      const { error: uploadError } = await supabaseServer.storage
+        .from(APP_DOC_BUCKET)
+        .upload(filename, bytes, {
+          contentType: detected,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("[submitDelegateRequest] Upload failed:", uploadError);
+        return { success: false, error: "Failed to upload delegate document. Please try again." };
+      }
+
+      documentStoragePath = filename;
+
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    await prisma.delegateRequest.create({
+      data: {
+        seniorId: session.userId,
+        fullName,
+        relationship,
+        contactNumber,
+        documentUrl: documentStoragePath,
+        status: "Pending",
+      },
+    });
+
+    // Notify Admins via activity log
+    await prisma.activityLog.create({
+      data: {
+        action: "Submitted Delegate Nomination",
+        details: `Senior ${senior.lastName}, ${senior.firstName} nominated ${fullName} (${relationship}) as delegate.`,
+        adminId: "SYSTEM",
+      },
+    }).catch(() => {});
+
+    revalidatePath("/senior/delegate");
+    return { success: true };
+  } catch (error) {
+    console.error("[submitDelegateRequestAction] Error:", error);
+    return { success: false, error: "Failed to submit delegate nomination. Please try again." };
+  }
+}
+
+// ─── Senior: Cancel Pending Delegate Request ──────────────────────────────────
+
+export async function cancelDelegateRequestAction(requestId: string) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SENIOR") {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    const request = await prisma.delegateRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.seniorId !== session.userId) {
+      return { success: false, error: "Request not found." };
+    }
+
+    if (request.status !== "Pending") {
+      return { success: false, error: "Only pending requests can be cancelled." };
+    }
+
+    // Clean up uploaded document if any
+    if (request.documentUrl) {
+      await supabaseServer.storage
+        .from(APP_DOC_BUCKET)
+        .remove([request.documentUrl])
+        .catch(() => {});
+    }
+
+    await prisma.delegateRequest.delete({
+      where: { id: requestId },
+    });
+
+    revalidatePath("/senior/delegate");
+    return { success: true };
+  } catch (error) {
+    console.error("[cancelDelegateRequestAction] Error:", error);
+    return { success: false, error: "Failed to cancel request." };
+  }
+}
+
+// ─── Admin: Approve Delegate Request ──────────────────────────────────────────
+
+export async function approveDelegateRequestAction(requestId: string) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "ADMIN") {
+      return { success: false, error: "Unauthorized. Admin role required." };
+    }
+
+    const request = await prisma.delegateRequest.findUnique({
+      where: { id: requestId },
+      include: { senior: true },
+    });
+
+    if (!request) {
+      return { success: false, error: "Delegate request not found." };
+    }
+
+    if (request.status !== "Pending") {
+      return { success: false, error: `This request is already ${request.status.toLowerCase()}.` };
+    }
+
+    if (request.senior.delegateId) {
+      return { success: false, error: "Senior already has an active delegate. Remove the current delegate first." };
+    }
+
+    // Single transaction: create Delegate, update Senior, update Request, log, notify
+    await prisma.$transaction(async (tx) => {
+      const delegate = await tx.delegate.create({
+        data: {
+          fullName: request.fullName,
+          relationship: request.relationship,
+          contactNumber: request.contactNumber,
+          idPhotoUrl: request.documentUrl,
+        },
+      });
+
+      await tx.senior.update({
+        where: { id: request.seniorId },
+        data: { delegateId: delegate.id },
+      });
+
+      await tx.delegateRequest.update({
+        where: { id: requestId },
+        data: {
+          status: "Approved",
+          reviewedById: session.userId,
+          reviewedAt: new Date(),
+        },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          action: "Approved Delegate Request",
+          details: `Approved delegate ${request.fullName} (${request.relationship}) for senior ${request.senior.lastName}, ${request.senior.firstName} (OSCA: ${request.senior.oscaId}).`,
+          adminId: session.userId,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          title: "Delegate Approved",
+          message: `Your nominated delegate ${request.fullName} (${request.relationship}) has been approved by OSCA and is now active.`,
+          type: "Alert",
+          seniorId: request.seniorId,
+        },
+      });
+    });
+
+    revalidatePath("/senior/delegate");
+    revalidatePath(`/admin/seniors/${request.seniorId}`);
+    revalidatePath("/admin/delegates");
+    return { success: true };
+  } catch (error) {
+    console.error("[approveDelegateRequestAction] Error:", error);
+    return { success: false, error: "Failed to approve delegate request." };
+  }
+}
+
+// ─── Admin: Reject Delegate Request ───────────────────────────────────────────
+
+export async function rejectDelegateRequestAction(requestId: string, reason?: string) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "ADMIN") {
+      return { success: false, error: "Unauthorized. Admin role required." };
+    }
+
+    const request = await prisma.delegateRequest.findUnique({
+      where: { id: requestId },
+      include: { senior: true },
+    });
+
+    if (!request) {
+      return { success: false, error: "Delegate request not found." };
+    }
+
+    if (request.status !== "Pending") {
+      return { success: false, error: `This request is already ${request.status.toLowerCase()}.` };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.delegateRequest.update({
+        where: { id: requestId },
+        data: {
+          status: "Rejected",
+          reviewNote: reason || null,
+          reviewedById: session.userId,
+          reviewedAt: new Date(),
+        },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          action: "Rejected Delegate Request",
+          details: `Rejected delegate request for ${request.fullName} (Senior: ${request.senior.lastName}, ${request.senior.firstName}). Reason: ${reason || "None specified"}`,
+          adminId: session.userId,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          title: "Delegate Request Update",
+          message: `Your nominated delegate request for ${request.fullName} was not approved.${reason ? ` Note: ${reason}` : ""}`,
+          type: "Alert",
+          seniorId: request.seniorId,
+        },
+      });
+    });
+
+    revalidatePath("/senior/delegate");
+    revalidatePath(`/admin/seniors/${request.seniorId}`);
+    revalidatePath("/admin/delegates");
+    return { success: true };
+  } catch (error) {
+    console.error("[rejectDelegateRequestAction] Error:", error);
+    return { success: false, error: "Failed to reject delegate request." };
+  }
+}
+
+// ─── Admin: Fetch Paginated Delegate Requests with Signed URLs ────────────────
+
+export async function getPendingDelegateRequestsCount(): Promise<number> {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "ADMIN") return 0;
+    return await prisma.delegateRequest.count({
+      where: { status: "Pending" },
+    });
+  } catch {
+    return 0;
+  }
+}
+
+export async function getDelegateRequestsAction(params?: {
+  status?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "ADMIN") {
+      return { success: false, error: "Unauthorized. Admin role required." };
+    }
+
+    const page = Math.max(1, Number(params?.page || 1));
+    const limit = Math.max(1, Math.min(50, Number(params?.limit || 15)));
+    const skip = (page - 1) * limit;
+
+    const statusFilter = params?.status && params.status !== "all" ? params.status : undefined;
+    const search = params?.search?.trim();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
+    if (statusFilter) {
+      where.status = statusFilter;
+    }
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: "insensitive" } },
+        { contactNumber: { contains: search } },
+        { relationship: { contains: search, mode: "insensitive" } },
+        {
+          senior: {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+              { oscaId: { contains: search, mode: "insensitive" } },
+              { barangay: { contains: search, mode: "insensitive" } },
+            ],
+          },
+        },
+      ];
+    }
+
+    const [requests, total, pendingCount] = await Promise.all([
+      prisma.delegateRequest.findMany({
+        where,
+        include: {
+          senior: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              middleName: true,
+              oscaId: true,
+              barangay: true,
+              contactNumber: true,
+              delegateId: true,
+            },
+          },
+        },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.delegateRequest.count({ where }),
+      prisma.delegateRequest.count({ where: { status: "Pending" } }),
+    ]);
+
+    // Generate 1-hour signed URLs for any uploaded document paths in private bucket
+    const requestsWithUrls = await Promise.all(
+      requests.map(async (req) => {
+        let signedDocUrl: string | null = null;
+        if (req.documentUrl) {
+          const { data } = await supabaseServer.storage
+            .from(APP_DOC_BUCKET)
+            .createSignedUrl(req.documentUrl, 3600);
+          signedDocUrl = data?.signedUrl || null;
+        }
+        return {
+          ...req,
+          signedDocUrl,
+        };
+      })
+    );
+
+    return {
+      success: true,
+      requests: requestsWithUrls,
+      total,
+      pendingCount,
+      page,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  } catch (error) {
+    console.error("[getDelegateRequestsAction] Error:", error);
+    return { success: false, error: "Failed to load delegate requests." };
   }
 }
