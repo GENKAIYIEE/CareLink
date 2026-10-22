@@ -29,13 +29,9 @@ export function DelegateManager({ delegate }: { delegate: DelegateData | null })
     <div className="p-8">
       <div className="flex items-start justify-between border-b border-gray-100 pb-6 mb-6">
         <div className="flex items-center gap-4">
-          {delegate.idPhotoUrl ? (
-            <img src={delegate.idPhotoUrl} alt={delegate.fullName} className="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
-          ) : (
-            <div className="w-16 h-16 bg-[#006b2c]/10 text-[#006b2c] rounded-full flex items-center justify-center text-xl font-bold border-2 border-[#006b2c]/20">
-              {delegate.fullName[0]}
-            </div>
-          )}
+          <div className="w-16 h-16 bg-[#006b2c]/10 text-[#006b2c] rounded-full flex items-center justify-center text-xl font-bold border-2 border-[#006b2c]/20 shrink-0">
+            {delegate.fullName[0]}
+          </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900">{delegate.fullName}</h2>
             <p className="text-gray-500 font-medium">Verified Delegate</p>
