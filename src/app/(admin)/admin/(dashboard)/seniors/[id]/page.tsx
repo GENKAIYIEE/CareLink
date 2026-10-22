@@ -16,6 +16,11 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
     where: { id: resolvedParams.id },
     include: {
       delegate: true,
+      delegateRequests: {
+        where: { status: 'Pending' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
       claims: {
         include: { program: true },
         orderBy: { claimedAt: 'desc' },
@@ -42,6 +47,27 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
 
   // Calculate age safely
   const age = senior.dateOfBirth ? new Date().getFullYear() - new Date(senior.dateOfBirth).getFullYear() : 'N/A';
+
+  // Compute pending delegate request data with signed document URL if present
+  const pendingReq = senior.delegateRequests?.[0] ?? null;
+  let signedDelegateDocUrl: string | null = null;
+  if (pendingReq?.documentUrl) {
+    const { data } = await supabaseServer.storage
+      .from("application-documents")
+      .createSignedUrl(pendingReq.documentUrl, 3600);
+    signedDelegateDocUrl = data?.signedUrl ?? null;
+  }
+  const pendingRequestData = pendingReq
+    ? {
+        id: pendingReq.id,
+        fullName: pendingReq.fullName,
+        relationship: pendingReq.relationship,
+        contactNumber: pendingReq.contactNumber,
+        documentUrl: pendingReq.documentUrl,
+        signedDocumentUrl: signedDelegateDocUrl,
+        createdAt: pendingReq.createdAt,
+      }
+    : null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 print:max-w-none print:m-0 print:p-0 print:space-y-0 print:block">
@@ -209,7 +235,11 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
               </div>
             </section>
             
-            <DelegateSection seniorId={senior.id} initialDelegate={senior.delegate} />
+            <DelegateSection
+              seniorId={senior.id}
+              initialDelegate={senior.delegate}
+              pendingRequest={pendingRequestData}
+            />
             
             <section>
               <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center border-b pb-2">
@@ -235,14 +265,6 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                           {claim.status}
                         </span>
                       </div>
-                      {claim.signature && (
-                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Digital Signature:</p>
-                          <div className="bg-white border-2 border-gray-200 rounded-md p-1 inline-block">
-                            <img src={claim.signature} alt="Claim Signature" className="h-10 w-auto object-contain" />
-                          </div>
-                        </div>
-                      )}
                     </li>
                   ))}
                 </ul>

@@ -48,6 +48,7 @@ model Senior {
   claims           Claim[]
   delegate         Delegate? @relation(fields: [delegateId], references: [id])
   notifications    Notification[]
+  delegateRequests DelegateRequest[]
 
   @@index([barangay])
   @@index([status])
@@ -62,6 +63,25 @@ model Delegate {
   createdAt     DateTime @default(now())
   claimsMade    Claim[]
   seniors       Senior[]
+}
+
+model DelegateRequest {
+  id            String    @id @default(uuid())
+  seniorId      String
+  senior        Senior    @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  fullName      String
+  relationship  String
+  contactNumber String
+  documentUrl   String?   // Supabase storage path for ID or authorization
+  status        String    @default("Pending") // "Pending" | "Approved" | "Rejected"
+  reviewNote    String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([seniorId, status])
+  @@index([status, createdAt])
 }
 
 model BenefitProgram {
@@ -130,4 +150,75 @@ model Notification {
   seniorId  String?
   senior    Senior?  @relation(fields: [seniorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// ─── Online Application Module ────────────────────────────────────────────────
+// Stores submissions from the public /apply form BEFORE they become a Senior.
+// Status flow: Pending → NeedsReupload → Approved | Rejected
+
+model Application {
+  id            String   @id @default(uuid())
+  referenceCode String   @unique          // human-readable: APP-YYYY-XXXXXXXX
+  status        String   @default("Pending") // Pending | NeedsReupload | Approved | Rejected
+
+  // Applicant personal details
+  firstName     String
+  middleName    String?
+  lastName      String
+  dateOfBirth   DateTime
+  gender        String
+  civilStatus   String
+  barangay      String
+  contactNumber String
+  email         String?
+
+  // Emergency contact
+  emergencyContactName String
+  emergencyContactNum  String
+  emergencyContactRel  String
+
+  // Password chosen by applicant — bcrypt-hashed — copied to Senior on approval
+  passwordHash String
+
+  // Who submitted on behalf of the senior (optional delegate info)
+  submittedByName         String?
+  submittedByRelationship String?
+
+  // Review fields (filled by OSCA staff)
+  reviewNote   String?
+  reviewedById String?   // Admin.id — not a FK so record survives admin deletion
+  reviewedAt   DateTime?
+
+  // Link to the Senior record created on approval
+  seniorId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents ApplicationDocument[]
+
+  @@index([status, createdAt])
+  @@index([barangay])
+  @@index([lastName, firstName])
+}
+
+model ApplicationDocument {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  // "proof_of_age" | "proof_of_residency" | "valid_id" | "photo"
+  type        String
+  storagePath String  // relative path inside Supabase bucket "application-documents"
+  mimeType    String
+  sizeBytes   Int
+
+  // Submitted | Accepted | NeedsReupload
+  status String  @default("Submitted")
+  note   String? // Staff note when requesting a re-upload
+
+  createdAt DateTime @default(now())
+
+  @@unique([applicationId, type])
+  @@index([applicationId])
 }

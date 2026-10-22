@@ -1,12 +1,29 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { updateSystemName, updateAdminPassword } from '@/lib/actions/settings';
 import { Settings, Shield, Save, KeyRound } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function SettingsForms({ defaultSystemName }: { defaultSystemName: string }) {
   const [systemState, systemAction, isSystemPending] = useActionState(updateSystemName, undefined);
   const [passwordState, passwordAction, isPasswordPending] = useActionState(updateAdminPassword, undefined);
+
+  useEffect(() => {
+    if (systemState?.success) {
+      toast.success(systemState.success);
+    } else if (systemState?.error) {
+      toast.error(systemState.error);
+    }
+  }, [systemState]);
+
+  useEffect(() => {
+    if (passwordState?.success) {
+      toast.success(passwordState.success);
+    } else if (passwordState?.error) {
+      toast.error(passwordState.error);
+    }
+  }, [passwordState]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">

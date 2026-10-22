@@ -38,6 +38,18 @@ export default async function SeniorsPage({
 
   const totalPages = Math.ceil(totalSeniors / itemsPerPage) || 1;
 
+  // Generate page numbers array with ellipses for clean navigation
+  const pageNumbers: (number | '...')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+  } else if (currentPage <= 3) {
+    pageNumbers.push(1, 2, 3, 4, '...', totalPages);
+  } else if (currentPage >= totalPages - 2) {
+    pageNumbers.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+  } else {
+    pageNumbers.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+  }
+
   return (
     <div className="space-y-6">
       <LiveUpdate interval={30000} />
@@ -51,7 +63,7 @@ export default async function SeniorsPage({
         <div className="mt-4 sm:mt-0">
           <Link
             href="/admin/seniors/register"
-            className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+            className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 transition-colors duration-150"
           >
             <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
             Add Senior
@@ -68,19 +80,19 @@ export default async function SeniorsPage({
         )}
       </div>
 
-      {/* Seniors Table */}
-      <div className="mt-8 flow-root">
+      {/* Seniors Table with Integrated Pagination */}
+      <div className="mt-6 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
+            <div className="overflow-hidden bg-white border border-gray-200 sm:rounded-lg shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OSCA ID</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Barangay</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 text-right text-sm font-semibold text-gray-900">
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 sm:pl-6">Name</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">OSCA ID</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Barangay</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Status</th>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
                       Actions
                     </th>
                   </tr>
@@ -88,24 +100,24 @@ export default async function SeniorsPage({
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {seniors.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-gray-500">
+                      <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
                         No senior citizens found. Click &quot;Add Senior&quot; to register one.
                       </td>
                     </tr>
                   ) : (
                     seniors.map((senior) => (
-                      <tr key={senior.id}>
+                      <tr key={senior.id} className="hover:bg-slate-50/60 transition-colors duration-150">
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           {senior.lastName}, {senior.firstName}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{senior.oscaId}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{senior.barangay}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                            getEffectiveStatus(senior) === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
-                            getEffectiveStatus(senior).includes('Inactive') ? 'bg-red-50 text-red-700 ring-red-600/20' : 
-                            senior.status === 'Bedridden' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' : 
-                            'bg-gray-50 text-gray-600 ring-gray-500/10'
+                        <td className="whitespace-nowrap px-3 py-4 text-sm font-mono text-gray-600">{senior.oscaId}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-600">{senior.barangay}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm">
+                          <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium border ${
+                            getEffectiveStatus(senior) === 'Active' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
+                            getEffectiveStatus(senior).includes('Inactive') ? 'bg-red-50 text-red-800 border-red-200' : 
+                            senior.status === 'Bedridden' ? 'bg-amber-50 text-amber-800 border-amber-200' : 
+                            'bg-gray-50 text-gray-700 border-gray-200'
                           }`}>
                             {getEffectiveStatus(senior)}
                           </span>
@@ -118,46 +130,95 @@ export default async function SeniorsPage({
                   )}
                 </tbody>
               </table>
+
+              {/* Integrated Pagination Footer */}
+              {totalPages > 1 && (
+                <div className="border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+                  {/* Mobile View */}
+                  <div className="flex flex-1 items-center justify-between sm:hidden">
+                    <Link
+                      href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.max(1, currentPage - 1).toString() }).toString()}`}
+                      className={`inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150 ${currentPage <= 1 ? 'pointer-events-none opacity-40' : ''}`}
+                    >
+                      Previous
+                    </Link>
+                    <span className="text-xs text-gray-600 font-medium">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Link
+                      href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.min(totalPages, currentPage + 1).toString() }).toString()}`}
+                      className={`inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150 ${currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
+                    >
+                      Next
+                    </Link>
+                  </div>
+
+                  {/* Desktop View */}
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        Showing <span className="font-semibold text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                        <span className="font-semibold text-gray-900">{Math.min(currentPage * itemsPerPage, totalSeniors)}</span> of{' '}
+                        <span className="font-semibold text-gray-900">{totalSeniors}</span> results
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="isolate inline-flex -space-x-px rounded-md border border-gray-300 bg-white shadow-sm" aria-label="Pagination">
+                        {/* Previous Button */}
+                        <Link
+                          href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.max(1, currentPage - 1).toString() }).toString()}`}
+                          className={`relative inline-flex items-center rounded-l-md px-2.5 py-1.5 text-gray-500 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 transition-colors duration-150 ${currentPage <= 1 ? 'pointer-events-none opacity-40' : ''}`}
+                          aria-label="Previous page"
+                        >
+                          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                        </Link>
+
+                        {/* Page Numbers */}
+                        {pageNumbers.map((p, idx) => {
+                          if (p === '...') {
+                            return (
+                              <span
+                                key={`ellipsis-${idx}`}
+                                className="relative inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-400 border-l border-gray-300"
+                              >
+                                …
+                              </span>
+                            );
+                          }
+                          const isCurrent = p === currentPage;
+                          return (
+                            <Link
+                              key={p}
+                              href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: p.toString() }).toString()}`}
+                              className={`relative inline-flex items-center px-3 py-1.5 text-xs font-semibold border-l border-gray-300 transition-colors duration-150 focus:z-20 focus:outline-offset-0 ${
+                                isCurrent
+                                  ? 'bg-[#163d28] text-white'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                              }`}
+                              aria-current={isCurrent ? 'page' : undefined}
+                            >
+                              {p}
+                            </Link>
+                          );
+                        })}
+
+                        {/* Next Button */}
+                        <Link
+                          href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.min(totalPages, currentPage + 1).toString() }).toString()}`}
+                          className={`relative inline-flex items-center rounded-r-md px-2.5 py-1.5 text-gray-500 border-l border-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 transition-colors duration-150 ${currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
+                          aria-label="Next page"
+                        >
+                          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg shadow ring-1 ring-black ring-opacity-5">
-          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalSeniors)}</span> of{' '}
-                <span className="font-medium">{totalSeniors}</span> results
-              </p>
-            </div>
-            <div>
-              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                <Link
-                  href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.max(1, currentPage - 1).toString() }).toString()}`}
-                  className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
-                >
-                  <span className="sr-only">Previous</span>
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </Link>
-                {/* Minimal pages display for admin */}
-                <div className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:z-20 focus:outline-offset-0">
-                  Page {currentPage} of {totalPages}
-                </div>
-                <Link
-                  href={`/admin/seniors?${new URLSearchParams({ ...(q ? { q } : {}), page: Math.min(totalPages, currentPage + 1).toString() }).toString()}`}
-                  className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
-                >
-                  <span className="sr-only">Next</span>
-                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                </Link>
-              </nav>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

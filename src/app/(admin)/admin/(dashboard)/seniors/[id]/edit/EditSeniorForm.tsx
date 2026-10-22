@@ -7,6 +7,7 @@ import * as z from "zod";
 import { ChevronRight, ChevronLeft, Save, CheckCircle2, XCircle } from "lucide-react";
 import { updateSeniorAction } from "@/lib/actions/seniors";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { AGOO_BARANGAYS } from "@/lib/constants";
 import { BarangayCombobox } from "@/components/shared/BarangayCombobox";
 
@@ -48,7 +49,7 @@ export interface EditSeniorProps {
 
 export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [bannerToast, setBannerToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const formattedDateOfBirth = senior.dateOfBirth 
     ? format(new Date(senior.dateOfBirth), "yyyy-MM-dd")
@@ -74,23 +75,27 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
   });
 
   const showToast = (message: string, type: "success" | "error") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 5000);
+    setBannerToast({ message, type });
+    setTimeout(() => setBannerToast(null), 5000);
   };
 
   const onSubmit = async (data: SeniorFormData) => {
     setIsSubmitting(true);
-    setToast(null);
+    setBannerToast(null);
     try {
       const res = await updateSeniorAction(senior.id, data);
       if (res.success) {
         showToast("Senior profile updated successfully.", "success");
+        toast.success("Senior profile updated successfully.");
       } else {
-        showToast("Failed to update profile. Please try again.", "error");
+        const err = res.error || "Failed to update profile. Please try again.";
+        showToast(err, "error");
+        toast.error(err);
       }
     } catch (err) {
       console.error(err);
       showToast("Failed to update profile. Please try again.", "error");
+      toast.error("Failed to update profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,10 +104,10 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col p-8 relative">
       {/* Toast Notification */}
-      {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-in slide-in-from-top-5 duration-300 ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
-          {toast.type === "success" ? <CheckCircle2 className="w-5 h-5 mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
-          {toast.message}
+      {bannerToast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-in slide-in-from-top-5 duration-300 ${bannerToast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
+          {bannerToast.type === "success" ? <CheckCircle2 className="w-5 h-5 mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
+          {bannerToast.message}
         </div>
       )}
 

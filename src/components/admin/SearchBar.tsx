@@ -12,18 +12,32 @@ function SearchBarInner({ placeholder }: { placeholder: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [query, setQuery] = useState(searchParams.get("q")?.toString() || "");
+
+  const urlQ = searchParams.get("q")?.toString() || "";
+  const [query, setQuery] = useState(urlQ);
+
+  // Sync internal state if URL changes externally (e.g. back/forward navigation)
+  useEffect(() => {
+    setQuery(urlQ);
+  }, [urlQ]);
 
   useEffect(() => {
+    // If the input value matches what is already in the URL query, do nothing.
+    // This prevents resetting `page` when pagination buttons or other query params change.
+    if (query.trim() === urlQ.trim()) {
+      return;
+    }
+
     const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams);
-      if (query) {
-        params.set("q", query);
+      const params = new URLSearchParams(searchParams.toString());
+      const trimmed = query.trim();
+      if (trimmed) {
+        params.set("q", trimmed);
       } else {
         params.delete("q");
       }
-      
-      // Always reset pagination when searching
+
+      // Reset to page 1 only when a search query is actually typed or changed
       params.delete("page");
 
       startTransition(() => {
@@ -32,7 +46,7 @@ function SearchBarInner({ placeholder }: { placeholder: string }) {
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
-  }, [query, pathname, router, searchParams]);
+  }, [query, pathname, router, searchParams, urlQ]);
 
   return (
     <div className="flex max-w-md bg-white rounded-md shadow-sm border border-gray-300 px-3 py-2 relative">

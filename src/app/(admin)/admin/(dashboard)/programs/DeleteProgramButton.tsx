@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { deleteProgram } from '@/lib/actions/programs';
+import { toast } from 'sonner';
 
 export default function DeleteProgramButton({ id, title }: { id: string, title: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,12 +11,18 @@ export default function DeleteProgramButton({ id, title }: { id: string, title: 
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    const result = await deleteProgram(id);
-    setIsDeleting(false);
-    if (result.success) {
-      setIsOpen(false);
-    } else {
-      alert(result.error || 'Failed to delete program');
+    try {
+      const result = await deleteProgram(id);
+      setIsDeleting(false);
+      if (result.success) {
+        toast.success(`Program "${title}" deleted successfully.`);
+        setIsOpen(false);
+      } else {
+        toast.error(result.error || 'Failed to delete program');
+      }
+    } catch {
+      setIsDeleting(false);
+      toast.error('An unexpected error occurred while deleting.');
     }
   };
 
