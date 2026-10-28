@@ -9,6 +9,9 @@ import { getEffectiveStatus } from '@/lib/utils/status';
 import { getMilestoneInfo } from '@/lib/utils/milestone';
 
 export const dynamic = 'force-dynamic';
+export const metadata = {
+  title: 'Senior Citizens Directory',
+};
 
 const MILESTONE_FILTERS = [
   { key: 'all', label: 'All Seniors' },
