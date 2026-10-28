@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -10,6 +11,22 @@ import { FaceEnrollmentSection } from "@/components/senior/FaceEnrollmentSection
 import { supabaseServer } from "@/lib/supabase-server";
 import { calculateExactAge, getMilestoneInfo, MILESTONE_AGES } from "@/lib/utils/milestone";
 import { MilestoneStatusEditor } from "./MilestoneStatusEditor";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const senior = await prisma.senior.findUnique({
+    where: { id: resolvedParams.id },
+    select: { firstName: true, lastName: true, oscaId: true },
+  });
+
+  if (!senior) {
+    return { title: "Senior Citizen Profile" };
+  }
+
+  return {
+    title: `OSCA Form - ${senior.lastName}, ${senior.firstName} (${senior.oscaId})`,
+  };
+}
 
 export default async function SeniorViewPage({ params }: { params: { id: string } }) {
   // Await the params to satisfy the Next.js standard for App Router dynamic segments

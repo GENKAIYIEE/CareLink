@@ -1,6 +1,15 @@
+import type { Metadata } from 'next';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { prisma } from '@/lib/prisma';
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s | CareLink Admin",
+    default: "CareLink Admin Portal",
+  },
+  description: "CareLink Senior Citizen Assistance Management System - Admin Portal",
+};
 
 // Force all admin pages to be server-rendered on demand.
 // This prevents Next.js from attempting to pre-render admin routes at build time,
