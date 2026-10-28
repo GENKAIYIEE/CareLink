@@ -8,6 +8,8 @@ import PrintFormButton from "./PrintFormButton";
 import { getEffectiveStatus } from "@/lib/utils/status";
 import { FaceEnrollmentSection } from "@/components/senior/FaceEnrollmentSection";
 import { supabaseServer } from "@/lib/supabase-server";
+import { calculateExactAge, getMilestoneInfo, MILESTONE_AGES } from "@/lib/utils/milestone";
+import { MilestoneStatusEditor } from "./MilestoneStatusEditor";
 
 export default async function SeniorViewPage({ params }: { params: { id: string } }) {
   // Await the params to satisfy the Next.js standard for App Router dynamic segments
@@ -46,7 +48,9 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
   }
 
   // Calculate age safely
-  const age = senior.dateOfBirth ? new Date().getFullYear() - new Date(senior.dateOfBirth).getFullYear() : 'N/A';
+  const exactAge = senior.dateOfBirth ? calculateExactAge(senior.dateOfBirth) : null;
+  const age = exactAge !== null ? exactAge : 'N/A';
+  const milestoneInfo = getMilestoneInfo(senior);
 
   // Compute pending delegate request data with signed document URL if present
   const pendingReq = senior.delegateRequests?.[0] ?? null;
@@ -149,6 +153,12 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
                   <dt className="text-gray-500 font-medium">Contact Number</dt>
                   <dd className="text-gray-900 mt-1">{senior.contactNumber || 'N/A'}</dd>
                 </div>
+                {/* Milestone Age Status with Inline Editor */}
+                <MilestoneStatusEditor
+                  seniorId={senior.id}
+                  initialMilestoneAge={senior.milestoneAge}
+                  dateOfBirth={senior.dateOfBirth}
+                />
               </dl>
             </section>
 
@@ -296,9 +306,9 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
           <div className="flex items-start justify-between mb-2">
             {/* ID & Status */}
             <div className="flex-1 mr-8">
-              <div className="flex flex-col gap-1 text-sm bg-gray-50 p-2 border border-gray-200">
-                <p><strong className="text-gray-800 uppercase">OSCA ID:</strong> <span className="font-mono text-lg ml-2 font-bold">{senior.oscaId}</span></p>
-                <p><strong className="text-gray-800 uppercase">Status:</strong> <span className={`uppercase tracking-wider ml-2 font-bold ${getEffectiveStatus(senior).includes('Inactive') ? 'text-red-600' : 'text-green-600'}`}>{getEffectiveStatus(senior)}</span></p>
+              <div className="flex flex-col gap-1 text-xs bg-gray-50 p-2 border border-gray-200">
+                <p><strong className="text-gray-800 uppercase">OSCA ID:</strong> <span className="font-mono text-xs ml-2 font-bold">{senior.oscaId}</span></p>
+                <p><strong className="text-gray-800 uppercase">Status:</strong> <span className="uppercase tracking-wider ml-2 text-xs font-bold text-gray-900">{getEffectiveStatus(senior)}</span></p>
               </div>
             </div>
 
@@ -344,6 +354,28 @@ export default async function SeniorViewPage({ params }: { params: { id: string 
             <div className="col-span-2 flex items-end">
               <strong>Contact Number:</strong> 
               <span className="ml-2 border-b border-gray-400 flex-1 px-2 pb-0.5">{senior.contactNumber || 'N/A'}</span>
+            </div>
+
+            {/* Milestone Age Applicant Section (Matching Official Municipal Form) */}
+            <div className="col-span-2 mt-2 pt-2 border-t border-gray-300">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-[11px] text-gray-800">
+                  Applicant for milestone age: <span className="font-normal italic text-gray-600">(Kindly check whichever applies)</span>
+                </span>
+                <div className="flex items-center gap-4 text-xs">
+                  {MILESTONE_AGES.map((m) => {
+                    const isChecked = milestoneInfo.effectiveMilestone === m;
+                    return (
+                      <span key={m} className="inline-flex items-center gap-1.5 font-bold">
+                        <span className={`w-3.5 h-3.5 rounded-full border border-black inline-flex items-center justify-center text-[10px] ${isChecked ? 'bg-black text-white font-bold' : 'bg-white'}`}>
+                          {isChecked ? '✓' : ''}
+                        </span>
+                        <span>{m}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
