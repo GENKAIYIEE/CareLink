@@ -43,6 +43,7 @@ model Senior {
   barangay         String
   contactNumber    String?
   delegateId       String?
+  milestoneAge     Int?      // Milestone age applicant: 80, 85, 90, 95, 100
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   claims           Claim[]
@@ -52,6 +53,7 @@ model Senior {
 
   @@index([barangay])
   @@index([status])
+  @@index([milestoneAge])
 }
 
 model Delegate {

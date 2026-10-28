@@ -50,6 +50,7 @@ export interface SeniorInputData {
   emergencyContactRel?: string | null;
   photoUrl?: string | null;
   email?: string | null;
+  milestoneAge?: number | null;
 }
 
 export async function registerSeniorAction(data: SeniorInputData) {
@@ -104,6 +105,7 @@ export async function registerSeniorAction(data: SeniorInputData) {
             passwordHash,
             photoUrl:             data.photoUrl             || null,
             email:                data.email                || null,
+            milestoneAge:         data.milestoneAge !== undefined ? data.milestoneAge : null,
           },
         });
 
@@ -151,7 +153,7 @@ export async function registerSeniorAction(data: SeniorInputData) {
       },
     };
   } catch (error: unknown) {
-    const errObj = error as any;
+    const errObj = error as { code?: string; meta?: { target?: unknown }; message?: string };
     if (errObj?.code === 'P2002') {
       const target = errObj?.meta?.target;
       const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
@@ -185,6 +187,7 @@ export async function updateSeniorAction(id: string, data: SeniorInputData) {
         emergencyContactNum: data.emergencyContactNum,
         emergencyContactRel: data.emergencyContactRel,
         email: data.email || null,
+        milestoneAge: data.milestoneAge !== undefined ? data.milestoneAge : null,
       },
     });
     const session = await getSession();
@@ -355,6 +358,47 @@ export async function uploadMonthlyPictureAction(seniorId: string, pictureUrl: s
   } catch (error: unknown) {
     console.error("Error saving monthly picture:", error);
     return { success: false, error: "Failed to save picture. Please try again." };
+  }
+}
+
+export async function updateSeniorMilestoneAction(seniorId: string, milestoneAge: number | null) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') {
+      return { success: false, error: "Unauthorized. Admin privileges required." };
+    }
+
+    if (milestoneAge !== null && ![80, 85, 90, 95, 100].includes(milestoneAge)) {
+      return { success: false, error: "Invalid milestone age. Permitted values are 80, 85, 90, 95, 100, or None." };
+    }
+
+    const updatedSenior = await prisma.senior.update({
+      where: { id: seniorId },
+      data: { milestoneAge },
+      select: { id: true, firstName: true, lastName: true, oscaId: true, milestoneAge: true },
+    });
+
+    try {
+      await prisma.activityLog.create({
+        data: {
+          action: "Updated Milestone Age",
+          details: `Set milestone age to ${milestoneAge ? `${milestoneAge}` : 'None/Auto'} for ${updatedSenior.firstName} ${updatedSenior.lastName} (${updatedSenior.oscaId})`,
+          adminId: session.userId,
+        },
+      });
+    } catch (logErr) {
+      console.warn("[updateSeniorMilestone] Activity log failed (non-fatal):", logErr);
+    }
+
+    revalidatePath("/admin/seniors");
+    revalidatePath(`/admin/seniors/${seniorId}`);
+    revalidatePath(`/admin/seniors/${seniorId}/edit`);
+    revalidatePath("/admin");
+
+    return { success: true, data: updatedSenior };
+  } catch (error: unknown) {
+    console.error("Error updating senior milestone:", error);
+    return { success: false, error: "Database error while updating milestone age." };
   }
 }
 

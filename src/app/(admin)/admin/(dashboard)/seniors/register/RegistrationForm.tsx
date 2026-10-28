@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { suggestMilestoneAge } from "@/lib/utils/milestone";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
@@ -48,6 +49,7 @@ const seniorSchema = z.object({
   emergencyContactNum: z.string().min(11, "Valid contact number required"),
   emergencyContactRel: z.string().min(1, "Relationship is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  milestoneAge: z.number().nullable().optional(),
 });
 
 type SeniorFormData = z.infer<typeof seniorSchema>;
@@ -163,10 +165,22 @@ export function RegistrationForm() {
       emergencyContactNum: "",
       emergencyContactRel: "",
       email: "",
+      milestoneAge: null,
     },
   });
 
   const formData = watch();
+  const currentDob = formData.dateOfBirth;
+  const currentMilestone = formData.milestoneAge;
+  const isMilestoneOverriddenRef = useRef(false);
+
+  useEffect(() => {
+    if (currentDob && !isMilestoneOverriddenRef.current) {
+      const suggested = suggestMilestoneAge(currentDob);
+      setValue("milestoneAge", suggested ?? null);
+    }
+  }, [currentDob, setValue]);
+
   const calculatedAge = (() => {
     if (!formData.dateOfBirth) return null;
     const dob = new Date(formData.dateOfBirth);
@@ -327,7 +341,7 @@ export function RegistrationForm() {
                       className="w-full border p-2 rounded-lg"
                       placeholder="juan.delacruz@example.com"
                     />
-                    <p className="text-[10px] text-gray-500 mt-1">If the senior does not have an email, you may use their delegate's email.</p>
+                    <p className="text-[10px] text-gray-500 mt-1">If the senior does not have an email, you may use their delegate&apos;s email.</p>
                     {errors.email && (
                       <span className="text-red-500 text-xs">{errors.email.message}</span>
                     )}
@@ -350,6 +364,26 @@ export function RegistrationForm() {
                     {errors.dateOfBirth && (
                       <span className="text-red-500 text-xs">{errors.dateOfBirth.message}</span>
                     )}
+                  </div>
+
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-sm font-medium mb-1">Milestone Age</label>
+                    <select
+                      value={currentMilestone === null || currentMilestone === undefined ? "" : String(currentMilestone)}
+                      onChange={(e) => {
+                        isMilestoneOverriddenRef.current = true;
+                        const val = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                        setValue("milestoneAge", val, { shouldDirty: true, shouldValidate: true });
+                      }}
+                      className="w-full border p-2 rounded-lg"
+                    >
+                      <option value="">None / Auto</option>
+                      <option value="80">80 Years Old</option>
+                      <option value="85">85 Years Old</option>
+                      <option value="90">90 Years Old</option>
+                      <option value="95">95 Years Old</option>
+                      <option value="100">100 Years Old (Centenarian)</option>
+                    </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium mb-1">Gender</label>

@@ -26,6 +26,7 @@ const seniorSchema = z.object({
   emergencyContactNum: z.string().min(11, "Valid contact number required"),
   emergencyContactRel: z.string().min(1, "Relationship is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  milestoneAge: z.number().nullable().optional(),
 });
 
 type SeniorFormData = z.infer<typeof seniorSchema>;
@@ -45,6 +46,7 @@ export interface EditSeniorProps {
   emergencyContactNum?: string | null;
   emergencyContactRel?: string | null;
   email?: string | null;
+  milestoneAge?: number | null;
 }
 
 export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
@@ -70,7 +72,8 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
       emergencyContactName: senior.emergencyContactName || "", 
       emergencyContactNum: senior.emergencyContactNum || "",
       emergencyContactRel: senior.emergencyContactRel || "",
-      email: senior.email || ""
+      email: senior.email || "",
+      milestoneAge: senior.milestoneAge ?? null,
     }
   });
 
@@ -129,7 +132,7 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
                 <div className="col-span-2">
                   <label className="block text-sm font-medium mb-1">Email Address</label>
                   <input type="email" {...register("email")} className="w-full border p-2 rounded-lg" placeholder="juan.delacruz@example.com" />
-                  <p className="text-[10px] text-gray-500 mt-1">If the senior does not have an email, you may use their delegate's email.</p>
+                  <p className="text-[10px] text-gray-500 mt-1">If the senior does not have an email, you may use their delegate&apos;s email.</p>
                   {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
                 </div>
                 <div className="col-span-2">
@@ -140,6 +143,25 @@ export function EditSeniorForm({ senior }: { senior: EditSeniorProps }) {
                   <label className="block text-sm font-medium mb-1">Date of Birth</label>
                   <input type="date" {...register("dateOfBirth")} className="w-full border p-2 rounded-lg" />
                   {errors.dateOfBirth && <span className="text-red-500 text-xs">{errors.dateOfBirth.message}</span>}
+                </div>
+
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-sm font-medium mb-1">Milestone Age</label>
+                  <select
+                    value={watch("milestoneAge") === null || watch("milestoneAge") === undefined ? "" : String(watch("milestoneAge"))}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                      setValue("milestoneAge", val, { shouldDirty: true });
+                    }}
+                    className="w-full border p-2 rounded-lg"
+                  >
+                    <option value="">None / Auto</option>
+                    <option value="80">80 Years Old</option>
+                    <option value="85">85 Years Old</option>
+                    <option value="90">90 Years Old</option>
+                    <option value="95">95 Years Old</option>
+                    <option value="100">100 Years Old (Centenarian)</option>
+                  </select>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium mb-1">Gender</label>
